@@ -4,7 +4,7 @@
  *                                 file descriptions
 =============================================================================================
  * implemented to enbeffectpostpass.fx by kingeric1992 for Fallout 4 ENB mod 0.288+
- *                                                                      update.  Sep/29/2016
+ *                                                                      update.  June/21/2020
  *      for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
  *
  ** Only SMAA 1x is avaliable
@@ -15,8 +15,9 @@
  *
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  * Usage:
+ * (optional)
+ *              #define  SMAA_UINAME My Awsome Name
  * add
- *              #define  SMAA_UINAME 0  // 1 == use smaa method independently
  *              #define  PASSNAME0   targetname
  *              #define  PASSNAME1   targetname1
  *              #define  PASSNAME2   targetname2
@@ -44,26 +45,9 @@
  *                              Settings
 ============================================================================================*/
 
-#define SMAA_PRESET      5  // 0 == low, 1 == medium, 2 == high, 3 == ultra, 4 == custom preset, 5 == runtime UI tweak
-#define SMAA_PREDICATION 1  // 0 == off, see descriptions below
-#define SMAA_EDGE_MODE   0  // 0 == color(quality), 1 == luma, 2 == depth(performance)
-#define SMAA_DEBUG       1  // 0 == off, enable additional options to display texture in each stage
+#define SMAA_PREDICATION 1  // 0 == off, 1 == on, 2 == dynamic.
 
-/*============================================================================================
- *              SMAA_PRESET_4 : static custom preset
-============================================================================================*/
-// Under same settings, static custom preset will have better performance then SMAA_PRESET_5 UI tweak.
-// detail descriptions below.
 
-#define SMAA_THRESHOLD              0.1
-#define SMAA_MAX_SEARCH_STEPS       16
-#define SMAA_MAX_SEARCH_STEPS_DIAG  0
-#define SMAA_CORNER_ROUNDING        25
-
-// Predicated thresholding \\
-#define SMAA_PREDICATION_THRESHOLD  0.01
-#define SMAA_PREDICATION_SCALE      2.0
-#define SMAA_PREDICATION_STRENGTH   0.4
 
 /*============================================================================================
  *                            setting descriptions
@@ -129,154 +113,120 @@
 =============================================================================================
  *                             Copyright & Redistribution
 =============================================================================================
- * Copyright (C) 2011 Jorge Jimenez (jorge@iryoku.com)
- * Copyright (C) 2011 Jose I. Echevarria (joseignacioechevarria@gmail.com)
- * Copyright (C) 2011 Belen Masia (bmasia@unizar.es)
- * Copyright (C) 2011 Fernando Navarro (fernandn@microsoft.com)
- * Copyright (C) 2011 Diego Gutierrez (diegog@unizar.es)
- * All rights reserved.
+ * Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
+ * Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
+ * Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
+ * Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
+ * Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
  *
- * Redistribution and use in source and binary forms, with or without modification
- * are permitted provided that the following conditions are met:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy this software
+ * and associated documentation files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom
+ * the Software is furnished to do so, subject to the following conditions:
  *
- *    1. Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimer.
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software. As clarification, there is no requirement that the
+ * copyright notice and permission be included in binary distributions of the Software.
  *
- *    2. Redistributions in binary form must reproduce the following disclaimer
- *       in the documentation and/or other materials provided with the distribution:
- *
- *      "Uses SMAA. Copyright (C) 2011 by Jorge Jimenez, Jose I. Echevarria,
- *       Tiago Sousa, Belen Masia, Fernando Navarro and Diego Gutierrez."
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
- * OF SUCH DAMAGE.
- *
- * The views and conclusions contained in the software and documentation are
- * those of the authors and should not be interpreted as representing official
- * policies, either expressed or implied, of the copyright holders.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 =============================================================================================
  * end of descriptions
 ===========================================================================================*/
 
-//-------------------Internal resource & helpers-------------------------------------------------------------------------------
-#if    SMAA_PRESET == 5
-// quality 0 == low, 1 == mid, 2 == high, 3 == ultra, 4 == custom
-float  smaa_quality              < string UIName="SMAA Presets";               float UIMin=0;   int UIMax=4;    float UIStep=1.0; > = {5};
-float  smaa_threshold            < string UIName="SMAA Threshold";             float UIMin=0; float UIMax=0.5;                    > = {0.15};
-float  smaa_maxSearchSteps       < string UIName="SMAA Search Steps";          float UIMin=0;   int UIMax=98;   float UIStep=1.0; > = {64};
-float  smaa_maxSearchStepsDiag   < string UIName="SMAA Diagonal Search Steps"; float UIMin=0;   int UIMax=20;   float UIStep=1.0; > = {16};
-float  smaa_cornerRounding       < string UIName="SMAA Corner Rounding";       float UIMin=0;   int UIMax=100;  float UIStep=1.0; > = {8};
 
-#if    SMAA_PREDICATION == 1
-float  smaa_predicationthreshold < string UIName="SMAA Predication Threshold"; float UIMin=0; float UIMax=1; > = {0.01};
-float  smaa_predicationstrength  < string UIName="SMAA Predication Strength";  float UIMin=1; float UIMax=5; > = {2};
-float  smaa_predicationscale     < string UIName="SMAA Predication Scale";     float UIMin=0; float UIMax=1; > = {0.4};
-#define SMAA_PREDICATION_THRESHOLD      smaa_predicationthreshold
-#define SMAA_PREDICATION_STRENGTH       smaa_predicationstrength
-#define SMAA_PREDICATION_SCALE          smaa_predicationscale
+#ifndef SMAA_PREFIX
+    #error  SMAA_PREFIX define required.
 #endif
-#if    SMAA_DEBUG == 1          // tex 0 == input tex, 1 == edge, 2 == weighted edge, 3 == outcome
-float  smaa_showstagetex         < string UIName="SMAA Show Stage Tex";        float UIMin=0; float UIMax=3; float UIStep=1.0; > = {3};
-#endif
-
-static float4 smaa_presets[5] =
-{
-    float4(0.15,  4,  0, 100),  // low
-    float4(0.1,   8,  0, 100),  // min
-    float4(0.1,  16,  8,  25),  // high
-    float4(0.05, 32, 16,  25),  // ultra
-    float4(smaa_threshold,  smaa_maxSearchSteps,  smaa_maxSearchStepsDiag, smaa_cornerRounding)
-};
-
-//bypass to trick over preprocessor
-static float bypass_maxSearchStepsDiag = smaa_presets[smaa_quality].z;
-static float bypass_cornerRounding     = smaa_presets[smaa_quality].w;
-
-#define SMAA_FORCE_DIAGONAL_DETECTION   1
-#define SMAA_FORCE_CORNER_DETECTION     1
-
-#define SMAA_THRESHOLD                  smaa_presets[smaa_quality].x
-#define SMAA_MAX_SEARCH_STEPS           smaa_presets[smaa_quality].y
-#define SMAA_MAX_SEARCH_STEPS_DIAG      bypass_maxSearchStepsDiag
-#define SMAA_CORNER_ROUNDING            bypass_cornerRounding
-
-#elif SMAA_PRESET == 4
-    #define SMAA_DEBUG 0
-#elif SMAA_PRESET == 3
-    #define SMAA_PRESET_ULTRA 1
-    #define SMAA_DEBUG 0
-#elif SMAA_PRESET == 2
-    #define SMAA_PRESET_HIGH 1
-    #define SMAA_DEBUG 0
-#elif SMAA_PRESET == 1
-    #define SMAA_PRESET_MEDIUM 1
-    #define SMAA_DEBUG 0
-#elif SMAA_PRESET == 0
-    #define SMAA_PRESET_LOW 1
-    #define SMAA_DEBUG 0
-#endif
-
-
-
-SamplerState SMAA_LinearSamp { Filter = MIN_MAG_LINEAR_MIP_POINT; AddressU = Clamp; AddressV = Clamp; };
-SamplerState SMAA_PointSamp { Filter = MIN_MAG_MIP_POINT; AddressU = Clamp; AddressV = Clamp; };
-struct SMAA_enbTex2D {
-    Texture2D tex;
-    bool sRGB;
-
-    float4 get(float4 col) {
-        if (sRGB)   return pow(col, 2.2);
-        else        return col;
-        //return col <= 0.0031308? (12.92 * col) : (1.055 * pow(col,1./2.4) - 0.055);
-    }
-
-    float4 SamplerLevel(SamplerState samp, float2 coord, int lod) {
-        return get(tex.SampleLevel(samp, coord, lod));
-    }
-
-    float4 SamplerLevel(SamplerState samp, float2 coord, int lod, float2 off) {
-        return get(tex.SampleLevel(samp, coord, lod, off));
-    }
-
-    float4 Load(int2 pos, int2 offset) {
-        return get(tex.Load(pos, offset)); // only used in multi-sample shader
-    }
-
-    float4 Gather(SamplerState samp, float2 loc, int2 offset) {
-        return get(tex.Gather(samp, loc, offset));
-    }
-
-};
-
-//#define SMAA_HLSL_4_1 1 // not using this to expand sRGB sampling ability
-#define SMAATexture2D SMAA_enbTex2D
-#define SMAASampleLevelZero(tex, coord) tex.SampleLevel(SMAA_LinearSamp, coord, 0)
-#define SMAASampleLevelZeroPoint(tex, coord) tex.SampleLevel(SMAA_PointSamp, coord, 0)
-#define SMAASample(tex, coord) SMAASampleLevelZero(tex, coord)
-#define SMAASamplePoint(tex, coord) SMAASampleLevelZeroPoint(tex, coord)
-#define SMAASampleLevelZeroOffset(tex, coord, offset) tex.SampleLevel(LinearSampler, coord, 0, offset)
-#define SMAASampleOffset(tex, coord, offset) SMAASampleLevelZeroOffset(tex, coord, offset)
-#define SMAALerp(a, b, t) lerp(a, b, t)
-#define SMAASaturate(a) saturate(a)
-#define SMAAMad(a, b, c) mad(a, b, c)
-#define SMAA_FLATTEN [flatten]
-#define SMAA_BRANCH [branch]
-#define SMAATexture2DMS2 Texture2DMS<float4, 2>
-#define SMAALoad(tex, pos, sample) tex.Load(pos, sample)
-#define SMAAGather(tex, coord) tex.Gather(LinearSampler, coord, 0)
-
-#define SMAA_PIXEL_SIZE float2( ScreenSize.y, ScreenSize.y * ScreenSize.z)
-#include "SMAA.h"
 
 #define SMAA_STRING(a) #a
+#define SMAA_CAT(a) SMAA_PREFIX##a
+
+
+#ifndef SMAA_TEXTUREPATH
+    #define SMAA_TEXTUREPATH
+#endif
+
+SamplerState SMAA_LinearSamp { Filter = MIN_MAG_LINEAR_MIP_POINT; };
+SamplerState SMAA_PointSamp { Filter = MIN_MAG_MIP_POINT; };
+struct SMAA_enbTex2D {
+    Texture2D   tex;
+    bool        sRGB;
+
+    float4 get(float4 col) {
+        //return col <= 0.0031308? (12.92 * col) : (1.055 * pow(col,1./2.4) - 0.055);
+        if (sRGB)   return pow(col, 2.2);
+        else        return col;
+    }
+    float4 SampleLevel(SamplerState samp, float2 coord, int lod) { return get(tex.SampleLevel(samp, coord, lod)); }
+    float4 SampleLevel(SamplerState samp, float2 coord, int lod, float2 off) { return get(tex.SampleLevel(samp, coord, lod, off)); }
+    float4 Load(int3 pos, int2 offset) { return get(tex.Load(pos, offset)); } // only used in multi-sample shader
+    float4 Gather(SamplerState samp, float2 loc, int2 offset) { return get(tex.Gather(samp, loc, offset)); }
+};
+
+#define SMAA_CUSTOM_SL
+#define SMAATexture2D(tex) SMAA_enbTex2D tex
+#define SMAATexturePass2D(tex) tex
+#define SMAASampleLevelZero(tex, coord) tex.SampleLevel(SMAA_LinearSamp, coord, 0)
+#define SMAASampleLevelZeroPoint(tex, coord) tex.SampleLevel(SMAA_PointSamp, coord, 0)
+#define SMAASampleLevelZeroOffset(tex, coord, offset) tex.SampleLevel(SMAA_LinearSamp, coord, 0, offset)
+#define SMAASample(tex, coord) tex.Sample(SMAA_LinearSamp, coord)
+#define SMAASamplePoint(tex, coord) tex.Sample(SMAA_PointSamp, coord)
+#define SMAASampleOffset(tex, coord, offset) tex.Sample(SMAA_LinearSamp, coord, offset)
+#define SMAA_FLATTEN [flatten]
+#define SMAA_BRANCH [branch]
+#define SMAAGather(tex, coord) tex.Gather(LinearSampler, coord, 0)
+#define SMAA_RT_METRICS float2( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
+#define SMAA_THRESHOLD              (threshold)
+#define SMAA_MAX_SEARCH_STEPS       (maxSearchSteps)
+#define SMAA_MAX_SEARCH_STEPS_DIAG  (maxSearchStepDiag) // 0 == disabled?
+#define SMAA_CORNER_ROUNDING        (cornerRounding)
+#define SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR (contraAdapt)
+#define SMAA_PREDICATION_THRESHOLD  (pred_threshold)
+#define SMAA_PREDICATION_SCALE      (pred_scale)
+#define SMAA_PREDICATION_STRENGTH   (pred_strength)
+#define discard return 0   // this is to address discard but not exit in dx10+
+// Wrap SMAA methods into struct, so that the variables are per instance
+
+class SMAA_Base_t {
+    uint edgeMode;  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
+    uint stage;     // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
+
+    float   threshold;
+    uint    maxSearchSteps;
+    uint    maxSearchStepDiag;
+    uint    cornerRounding;
+    float   contraAdapt;
+
+    #include "SMAA.hlsl"
+};
+
+// this will override func with same signature
+class SMAA_t : SMAA_Base_t {
+    bool    pred_enabled;
+    float   pred_threshold;
+    float   pred_strength;
+    float   pred_scale;
+
+    #undef  SMAA_PREDICATION
+    #define SMAA_PREDICATION 1
+    #include "SMAA.hlsl"
+};
+
+
+static const uint SMAA_edgeMode = 0;
+static const bool SMAA_predication = true;
+static const SMAA_t SMAA_Preset_Low     = { SMAA_edgeMode, 3, 0.15, 4, 0, 100, SMAA_predication, 0.01, 0.4, 2.0 };
+static const SMAA_t SMAA_Preset_Medium  = { SMAA_edgeMode, 3, 0.1,  8, 0, 100, SMAA_predication, 0.01, 0.4, 2.0 };
+static const SMAA_t SMAA_Preset_High    = { SMAA_edgeMode, 3, 0.1, 16, 8,  25, SMAA_predication, 0.01, 0.4, 2.0 };
+static const SMAA_t SMAA_Preset_Ultra   = { SMAA_edgeMode, 3, 0.05,32,16,  25, SMAA_predication, 0.01, 0.4, 2.0 };
+//static const SMAA_t SMAA_Preset_Custom  = { SMAA_edgeMode, 3, 0.05,32,16,  25, SMAA_predication, 0.01, 0.4, 2.0 };
+#undef  discard // clean up
+
 #ifndef SMAA_EDGE_TEX
 #define SMAA_EDGE_TEX   RenderTargetRGB32F
 #endif
@@ -287,8 +237,39 @@ struct SMAA_enbTex2D {
 #define SMAA_UINAME 1
 #endif
 
-Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA_AreaTex.dds";   >;
-Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA_SearchTex.dds"; >;
+uint    prefix##_quality            < string UIName= #prefix " Presets";               int UIMin=0; int    UIMax=4;    > = {5};\
+//-------------------Internal resource & helpers-------------------------------------------------------------------------------
+#define SMAA_UI( prefix, var  ) \
+uint    prefix##_edgeMode           < string UIName= #prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
+float   prefix##_threshold          < string UIName= #prefix " Threshold";             int UIMin=0; float  UIMax=0.5;  > = {0.15};\
+uint    prefix##_maxSearchSteps     < string UIName= #prefix " Search Steps";          int UIMin=0; int    UIMax=98;   > = {64};\
+uint    prefix##_maxSearchStepsDiag < string UIName= #prefix " Diagonal Search Steps"; int UIMin=0; int    UIMax=20;   > = {16};\
+uint    prefix##_cornerRounding     < string UIName= #prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
+float   prefix##_contraAdapt        < string UIName= #prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
+bool    prefix##_predication        < string UIName= #prefix " Predication";           > = {true};\
+uint    prefix##_thresholdP         < string UIName= #prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
+uint    prefix##_strengthP          < string UIName= #prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
+uint    prefix##_scaleP             < string UIName= #prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
+uint    prefix##_Stagetex           < string UIName= #prefix " Show Stage Tex";        int UIMin=0; int    UIMax=3;    > = {3};\
+\
+static const SMAA_t var = {\
+    prefix##_edgeMode,\
+    prefix##_Stagetex,\
+    prefix##_threshold,\
+    prefix##_maxSearchSteps,\
+    prefix##_maxSearchStepsDiag,\
+    prefix##_cornerRounding,\
+    prefix##_contraAdapt,\
+    prefix##_predication,\
+    prefix##_thresholdP,\
+    prefix##_strengthP,\
+    prefix##_scaleP\
+};
+
+// Assests --------------------------------------------------------------------------------------------------------------------
+
+Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = SMAA_TEXTUREPATH "SMAA_AreaTex.dds";   >;
+Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = SMAA_TEXTUREPATH "SMAA_SearchTex.dds"; >;
 
 static const SMAA_enbTex2D  SMAA_AreaTex        = { SMAA_enbAreaTex, false };
 static const SMAA_enbTex2D  SMAA_SearchTex      = { SMAA_enbAreaTex, false };
@@ -298,134 +279,86 @@ static const SMAA_enbTex2D  SMAA_DepthTex       = { TextureDepth, false };
 static const SMAA_enbTex2D  SMAA_EdgeTex        = { SMAA_EDGE_TEX, false};
 static const SMAA_enbTex2D  SMAA_BlendTex       = { SMAA_BLEND_TEX, false};
 
-struct VS_INPUT_SMAA
+struct SMAA_VS_Struct
 {
-	float3 pos   : POSITION;
-	float2 coord : TEXCOORD0;
-};
-
-struct VS_OUTPUT_SMAA
-{
-    float4 svPosition : SV_POSITION;
-    float2 texcoord   : TEXCOORD0;
-    float4 offset[3]  : TEXCOORD1;
+    float4 pos       : SV_POSITION;
+    float4 uv        : TEXCOORD0;
+    float4 offset[3] : TEXCOORD1;
 };
 
 //----------------------------------------------------------------------------------------------------------------------------
-//full screen quad
-void VS_SMAAClear( VS_INPUT_SMAA i, out float4 svPosition : SV_POSITION, out float2 texcoord : TEXCOORD0) {
-	svPosition = float4(i.pos, 1.0);
-    texcoord   = i.coord;
+void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t parmas) {
+    params.SMAAEdgeDetectionVS(io.uv.xy, io.offset);
+    io.pos.w = 1.;
 }
 
-//clear up buffer
-float4 PS_SMAAClear( float4 position : SV_POSITION, float2 texcoord : TEXCOORD0) : SV_Target {
-    return 0;
-}
-
-//original tex for bypass texture
-float4 PS_SMAAOriginal( float4 position : SV_POSITION, float2 texcoord : TEXCOORD0) : SV_Target {
-    return SMAA_ColorTex.tex.Sample(LinearSampler, texcoord);
-}
-
-
-//----------------------------------------------------------------------------------------------------------------------------
-void VS_SMAAEdgeDetection( VS_INPUT_SMAA i, out VS_OUTPUT_SMAA o) {
-    o.texcoord = i.coord;
-    SMAAEdgeDetectionVS(float4(i.pos, 1.0), o.svPosition, o.texcoord, o.offset);
-}
-
-float4 PS_SMAAEdgeDetection( VS_OUTPUT_SMAA i) : SV_Target {
-#if SMAA_EDGE_MODE == 1
-    return float4(SMAALumaEdgeDetectionPS( i.texcoord, i.offset, SMAA_ColorTexGamma
-    #if SMAA_PREDICATION == 1
-        , SMAA_DepthTex
-    #endif
-        ).xyz, 1.0);
-#elif SMAA_EDGE_MODE == 2
-    return float4(SMAADepthEdgeDetectionPS( i.texcoord, i.offset, SMAA_DepthTex).xyz, 1.0);
-#else
-    return float4(SMAAColorEdgeDetectionPS( i.texcoord, i.offset, SMAA_ColorTexGamma
-    #if SMAA_PREDICATION == 1
-        , SMAA_DepthTex
-    #endif
-        ).xyz, 1.0);
-#endif
+float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
+    if (params.pred_enabled) {
+        switch(params.edgeMode) {
+            case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rgb, 1.);
+            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.texcoord, i.offset, SMAA_DepthTex).xyz, 1.);
+            default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rgb, 1.);
+        }
+    } else {
+        switch(params.edgeMode) {
+            case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rgb, 1.);
+            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.texcoord, i.offset, SMAA_DepthTex).xyz, 1.);
+            default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rgb, 1.);
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------------
-void VS_SMAABlendingWeightCalculation( VS_INPUT_SMAA i, out VS_OUTPUT_SMAA o) {
-    float2 null;
-    o.texcoord = i.coord;
-    SMAABlendingWeightCalculationVS(float4(i.pos, 1.0), o.svPosition, o.texcoord, null, o.offset);
+void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
+    params.SMAABlendingWeightCalculationVS(io.uv.xy, io.uv.zw, io.offset);
+    io.pos.w = 1.;
 }
 
-float4 PS_SMAABlendingWeightCalculation( VS_OUTPUT_SMAA i) : SV_Target {
-    if(SMAA_EdgeTex.tex.Sample(LinearSampler, i.texcoord).a < 0.5) {discard; return;}
-    return SMAABlendingWeightCalculationPS( i.texcoord, i.svPosition.xy, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
+float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
+    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).a < .5) return 0;
+    return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 
 //----------------------------------------------------------------------------------------------------------------------------
-void VS_SMAANeighborhoodBlending( VS_INPUT_SMAA i, out VS_OUTPUT_SMAA o) {
-    float4 offset[2];
-    o.texcoord   = i.coord;
-    SMAANeighborhoodBlendingVS(float4(i.pos, 1.0), o.svPosition, o.texcoord, offset);
-    o.offset[0] = offset[0];
-    o.offset[1] = offset[1];
-    o.offset[2] = float4(0.0, 0.0, 0.0, 0.0);
+void SMAA_neighborhoodBlendingVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
+    params.SMAANeighborhoodBlendingVS(io.uv.xy, io.offset[0]);
+    io.pos.w = 1.;
 }
 
-float4 PS_SMAANeighborhoodBlending( VS_OUTPUT_SMAA i) : SV_Target {
-#if SMAA_DEBUG == 1
-    if     (smaa_showstagetex < 0.5) return SMAA_ColorTex.tex.Sample(LinearSampler, i.texcoord);
-    else if(smaa_showstagetex < 1.5) return SMAA_EdgeTex.tex.Sample(LinearSampler, i.texcoord);
-    else if(smaa_showstagetex < 2.5) return SMAA_BlendTex.tex.Sample(LinearSampler, i.texcoord);
-#endif
-    float4 offset[2] = {i.offset[0], i.offset[1]};
-    return SMAANeighborhoodBlendingPS( i.texcoord, offset, SMAA_ColorTex, SMAA_BlendTex);
+float4 SMAA_NeighborhoodBlendingPS( VS_OUTPUT_SMAA i, uniform SMAA_t params) : SV_Target {
+    switch (params.stage) {
+        case 0:  return SMAA_ColorTex.tex.Load(i.pos.xyw);
+        case 1:  return SMAA_EdgeTex.tex.Load(i.pos.xyw);
+        case 2:  return SMAA_BlendTex.tex.Load(i.pos.xyw);
+        default: return params.SMAANeighborhoodBlendingPS( i.uv.xy, i.offset[0], SMAA_ColorTex, SMAA_BlendTex);
+    }
 }
-#endif  // end of header.
+#endif  // SMAA.fxh
+
 
 //----------------techniques--------------------------------------------------------------------------------------------------
-technique11 PASSNAME0 <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX);
-#if SMAA_UINAME == 1
-    string UIName=SMAA_STRING(PASSNAME0);
+#ifdef SMAA_UINAME
+    #define SMAA_STRNAME string UIName=SMAA_STRING(SMAA_UINAME)
+    #undef SMAA_UINAME
+#else
+    #define SMAA_STRNAME
 #endif
-    >
-{
-    pass Clear
-    {
-        SetVertexShader(CompileShader(vs_5_0, VS_SMAAClear()));
-        SetPixelShader(CompileShader(ps_5_0, PS_SMAAClear()));
-    }
 
-    pass EdgeDetection
-    {
-        SetVertexShader(CompileShader(vs_5_0, VS_SMAAEdgeDetection()));
-        SetPixelShader(CompileShader(ps_5_0, PS_SMAAEdgeDetection()));
-    }
+#define SMAA_PASS0(p) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); SMAA_STRNAME; > {\
+    pass EdgeDetection {\
+        SetVertexShader(CompileShader(vs_5_0, SMAA_edgeDetectionVS(p)));\
+        SetPixelShader(CompileShader(ps_5_0, SMAA_edgeDetectionPS(p)));\
+    }\
 }
-
-technique11 PASSNAME1 <string RenderTarget=SMAA_STRING(SMAA_BLEND_TEX);>
-{
-    pass Clear
-    {
-        SetVertexShader(CompileShader(vs_5_0, VS_SMAAClear()));
-        SetPixelShader(CompileShader(ps_5_0, PS_SMAAClear()));
-    }
-
-    pass BlendingWeightCalculation
-    {
-        SetVertexShader(CompileShader(vs_5_0, VS_SMAABlendingWeightCalculation()));
-        SetPixelShader(CompileShader(ps_5_0, PS_SMAABlendingWeightCalculation()));
-    }
+#define SMAA_PASS1(p) <string RenderTarget=SMAA_STRING(SMAA_BLEND_TEX);> {\
+    pass BlendingWeightCalculation {\
+        SetVertexShader(CompileShader(vs_5_0, SMAA_blendingWeightCalcVS(p)));\
+        SetPixelShader(CompileShader(ps_5_0, SMAA_blendingWeightCalcPS(p)));\
+    }\
 }
-
-technique11 PASSNAME2
-{
-    pass NeighborhoodBlending
-    {
-        SetVertexShader(CompileShader(vs_5_0, VS_SMAANeighborhoodBlending()));
-        SetPixelShader(CompileShader(ps_5_0, PS_SMAANeighborhoodBlending()));
-    }
+#define SMAA_PASS2 {\
+    pass NeighborhoodBlending {\
+        SetVertexShader(CompileShader(vs_5_0, SMAA_neighborhoodBlendingVS(p)));\
+        SetPixelShader(CompileShader(ps_5_0, SMAA_NeighborhoodBlendingPS(p)));\
+    }\
 }
