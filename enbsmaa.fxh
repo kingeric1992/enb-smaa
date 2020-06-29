@@ -1,10 +1,10 @@
-#ifndef _ENBSMAA_FX_
-#define _ENBSMAA_FX_
+#ifndef _ENBSMAA_FXH_
+#define _ENBSMAA_FXH_
 /*===========================================================================================
  *                                 file descriptions
 =============================================================================================
- * implemented to enbeffectpostpass.fx by kingeric1992 for Fallout 4 ENB mod 0.288+
- *                                                                      update.  June/21/2020
+ * implemented to enbeffectpostpass.fx by kingeric1992 for Fallout4/SkyrimSE ENB mod 0.288+
+ *                                                                      update.  June/30/2020
  *      for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
  *
  ** Only SMAA 1x is avaliable
@@ -14,44 +14,73 @@
  * SMAA 4x  requires both of the above
  *
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * Usage:
- * (optional)
- *              #define  SMAA_UINAME My Awsome Name
- * add
- *              #define  PASSNAME0   targetname
- *              #define  PASSNAME1   targetname1
- *              #define  PASSNAME2   targetname2
- *              #include "enbsmaa.fx"
- *                                          at the end of enbeffectpostpass.fx.
- * where the targetname(N) is follow up the technique chain and increment to one before, if
- * the last technique is called THISPASS4, then set targetname to THISPASS5 and the rest with
- * increasing index.  ( targetname index "0" is empty )
+ *  Usage:
+ *      Adding
+ *          #include "enbsmaa.fxh"
+ *                  after other enb resources, use existing preset ( or create new ones ),
+ *  and insert SMAA techniques into your technique sections.
  *
- * If you wish to have SMAA as standalone effect that doesn't chain after other technique, set
- * SMAA_UINAME to 1 and have the pass index start from empty (which means "0").
+ *          technique11 myTechniques3 {...}
+ *          technique11 myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
+ *          technique11 myTechniques5 SMAA_PASS1(SMAA_Preset_Low)
+ *          technique11 myTechniques6 SMAA_PASS2(SMAA_Preset_Low)
+ *          technique11 myTechniques7 {...}
+ *
+ *  To use SMAA in first pass
+ *          technique11 myTechniques  SMAA_PASS0_NAME(  SMAA_Preset_Mid, "smaa demo")
+ *          technique11 myTechniques2 SMAA_PASS1(       SMAA_Preset_Mid)
+ *          technique11 myTechniques3 SMAA_PASS2(       SMAA_Preset_Mid)
+ *          technique11 myTechniques4 {...}
+ *
+ *  Presets includes SMAA_Preset_Low, SMAA_Preset_Mid, SMAA_Preset_High, SMAA_Preset_Ultra
+ *
+ *  To create custom preset, fill-in the SMAA_t struct directly
+ *          static const SMAA_t myPreset = myPresetSetter() {
+ *              SMAA_t o;
+ *                  o.edgeMode           =
+ *                  o.threshold          =
+ *                  o.maxSearchSteps     =
+ *                  o.maxSearchStepsDiag =
+ *                  o.cornerRounding     =
+ *                  o.contraAdapt        =
+ *
+ *                  o.pred_enabled       =
+ *                  o.pred_threshold     =
+ *                  o.pred_strength      =
+ *                  o.pred_scale         =
+ *                  o.stage              =
+ *              return o;
+ *          }
+ *  And use it in the techniques
+ *
+ *          technique11 myTechniques3 {...}
+ *          technique11 myTechniques4 SMAA_PASS0(myPreset)
+ *          technique11 myTechniques5 SMAA_PASS1(myPreset)
+ *          technique11 myTechniques6 SMAA_PASS2(myPreset)
+ *          technique11 myTechniques7 {...}
+ *
+ *  The SMAA header also includes a helper macro to create UI preset
+ *
+ *          SMAA_UI( "UI Prefix ", myUIPreset )
+ *
+ *  Where the "UI Prefix" is what will be prepend to UI elements.
+ *
+ *          technique11 myTechniques3 {...}
+ *          technique11 myTechniques4 SMAA_PASS0(myUIPreset)
+ *          technique11 myTechniques5 SMAA_PASS1(myUIPreset)
+ *          technique11 myTechniques6 SMAA_PASS2(myUIPreset)
+ *          technique11 myTechniques7 {...}
  *
  * in addition, you can change internal rendertarget with :
- * (they will be cleard, so change to other texture if any of the default tex is in used to pass
- * along data, otherwise, ignore this.)
  *
  *              #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (only require 2bit-RG channel)
  *              #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64 (RGBA requred [0,1] )
  *
  *                                          prior to inclueing "enbsmaa.fx"
  *
- * Loading multiple times with different PASSNAME is possible (under same name is not recommended).
- *
-==============================================================================================
- *                              Settings
 ============================================================================================*/
 
-#define SMAA_PREDICATION 1  // 0 == off, 1 == on, 2 == dynamic.
-
-
-
 /*============================================================================================
- *                            setting descriptions
-==============================================================================================
  * the following descriptions is provided in SMAA.h.
  *                                  for more detial on SMAA, visit http://www.iryoku.com/smaa/
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -139,20 +168,10 @@
 ===========================================================================================*/
 
 
-#ifndef SMAA_PREFIX
-    #error  SMAA_PREFIX define required.
-#endif
-
 #define SMAA_STRING(a) #a
-#define SMAA_CAT(a) SMAA_PREFIX##a
-
-
-#ifndef SMAA_TEXTUREPATH
-    #define SMAA_TEXTUREPATH
-#endif
 
 SamplerState SMAA_LinearSamp { Filter = MIN_MAG_LINEAR_MIP_POINT; };
-SamplerState SMAA_PointSamp { Filter = MIN_MAG_MIP_POINT; };
+SamplerState SMAA_PointSamp  { Filter = MIN_MAG_MIP_POINT; };
 struct SMAA_enbTex2D {
     Texture2D   tex;
     bool        sRGB;
@@ -193,16 +212,14 @@ struct SMAA_enbTex2D {
 // Wrap SMAA methods into struct, so that the variables are per instance
 
 class SMAA_Base_t {
-    uint edgeMode;  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
-    uint stage;     // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
-
+    uint    edgeMode;  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
     float   threshold;
     uint    maxSearchSteps;
     uint    maxSearchStepDiag;
     uint    cornerRounding;
     float   contraAdapt;
 
-    #include "SMAA.hlsl"
+    #include "SMAA/SMAA.hlsl"
 };
 
 // this will override func with same signature
@@ -211,20 +228,17 @@ class SMAA_t : SMAA_Base_t {
     float   pred_threshold;
     float   pred_strength;
     float   pred_scale;
+    uint    stage;     // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
 
     #undef  SMAA_PREDICATION
     #define SMAA_PREDICATION 1
-    #include "SMAA.hlsl"
+    #include "SMAA/SMAA.hlsl"
 };
 
-
-static const uint SMAA_edgeMode = 0;
-static const bool SMAA_predication = true;
-static const SMAA_t SMAA_Preset_Low     = { SMAA_edgeMode, 3, 0.15, 4, 0, 100, SMAA_predication, 0.01, 0.4, 2.0 };
-static const SMAA_t SMAA_Preset_Medium  = { SMAA_edgeMode, 3, 0.1,  8, 0, 100, SMAA_predication, 0.01, 0.4, 2.0 };
-static const SMAA_t SMAA_Preset_High    = { SMAA_edgeMode, 3, 0.1, 16, 8,  25, SMAA_predication, 0.01, 0.4, 2.0 };
-static const SMAA_t SMAA_Preset_Ultra   = { SMAA_edgeMode, 3, 0.05,32,16,  25, SMAA_predication, 0.01, 0.4, 2.0 };
-//static const SMAA_t SMAA_Preset_Custom  = { SMAA_edgeMode, 3, 0.05,32,16,  25, SMAA_predication, 0.01, 0.4, 2.0 };
+static const SMAA_t SMAA_Preset_Low     = { 0, 0.15, 4, 0, 100, true, 0.01, 0.4, 2, 3 };
+static const SMAA_t SMAA_Preset_Medium  = { 0, 0.1,  8, 0, 100, true, 0.01, 0.4, 2, 3 };
+static const SMAA_t SMAA_Preset_High    = { 0, 0.1, 16, 8,  25, true, 0.01, 0.4, 2, 3 };
+static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, true, 0.01, 0.4, 2, 3 };
 #undef  discard // clean up
 
 #ifndef SMAA_EDGE_TEX
@@ -233,43 +247,39 @@ static const SMAA_t SMAA_Preset_Ultra   = { SMAA_edgeMode, 3, 0.05,32,16,  25, S
 #ifndef SMAA_BLEND_TEX
 #define SMAA_BLEND_TEX  RenderTargetRGBA64
 #endif
-#ifndef SMAA_UINAME
-#define SMAA_UINAME 1
-#endif
 
-uint    prefix##_quality            < string UIName= #prefix " Presets";               int UIMin=0; int    UIMax=4;    > = {5};\
 //-------------------Internal resource & helpers-------------------------------------------------------------------------------
 #define SMAA_UI( prefix, var  ) \
-uint    prefix##_edgeMode           < string UIName= #prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
-float   prefix##_threshold          < string UIName= #prefix " Threshold";             int UIMin=0; float  UIMax=0.5;  > = {0.15};\
-uint    prefix##_maxSearchSteps     < string UIName= #prefix " Search Steps";          int UIMin=0; int    UIMax=98;   > = {64};\
-uint    prefix##_maxSearchStepsDiag < string UIName= #prefix " Diagonal Search Steps"; int UIMin=0; int    UIMax=20;   > = {16};\
-uint    prefix##_cornerRounding     < string UIName= #prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
-float   prefix##_contraAdapt        < string UIName= #prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
-bool    prefix##_predication        < string UIName= #prefix " Predication";           > = {true};\
-uint    prefix##_thresholdP         < string UIName= #prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
-uint    prefix##_strengthP          < string UIName= #prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
-uint    prefix##_scaleP             < string UIName= #prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
-uint    prefix##_Stagetex           < string UIName= #prefix " Show Stage Tex";        int UIMin=0; int    UIMax=3;    > = {3};\
+uint    var##_edgeMode           < string UIName= prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
+float   var##_threshold          < string UIName= prefix " Threshold";             int UIMin=0; float  UIMax=0.5;  > = {0.15};\
+uint    var##_maxSearchSteps     < string UIName= prefix " Search Steps";          int UIMin=0; int    UIMax=98;   > = {64};\
+uint    var##_maxSearchStepsDiag < string UIName= prefix " Diagonal Search Steps"; int UIMin=0; int    UIMax=20;   > = {16};\
+uint    var##_cornerRounding     < string UIName= prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
+float   var##_contraAdapt        < string UIName= prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
+bool    var##_predication        < string UIName= prefix " Predication";           > = {true};\
+uint    var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
+uint    var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
+uint    var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
+uint    var##_Stagetex           < string UIName= prefix " Show Stage Tex";        int UIMin=0; int    UIMax=3;    > = {3};\
 \
 static const SMAA_t var = {\
-    prefix##_edgeMode,\
-    prefix##_Stagetex,\
-    prefix##_threshold,\
-    prefix##_maxSearchSteps,\
-    prefix##_maxSearchStepsDiag,\
-    prefix##_cornerRounding,\
-    prefix##_contraAdapt,\
-    prefix##_predication,\
-    prefix##_thresholdP,\
-    prefix##_strengthP,\
-    prefix##_scaleP\
+    var##_edgeMode,\
+    var##_threshold,\
+    var##_maxSearchSteps,\
+    var##_maxSearchStepsDiag,\
+    var##_cornerRounding,\
+    var##_contraAdapt,\
+    var##_predication,\
+    var##_thresholdP,\
+    var##_strengthP,\
+    var##_scaleP,\
+    var##_Stagetex\
 };
 
 // Assests --------------------------------------------------------------------------------------------------------------------
 
-Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = SMAA_TEXTUREPATH "SMAA_AreaTex.dds";   >;
-Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = SMAA_TEXTUREPATH "SMAA_SearchTex.dds"; >;
+Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/SMAA_AreaTex.dds";   >;
+Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SMAA_SearchTex.dds"; >;
 
 static const SMAA_enbTex2D  SMAA_AreaTex        = { SMAA_enbAreaTex, false };
 static const SMAA_enbTex2D  SMAA_SearchTex      = { SMAA_enbAreaTex, false };
@@ -296,13 +306,13 @@ float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Targe
     if (params.pred_enabled) {
         switch(params.edgeMode) {
             case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rgb, 1.);
-            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.texcoord, i.offset, SMAA_DepthTex).xyz, 1.);
+            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xyz, 1.);
             default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rgb, 1.);
         }
     } else {
         switch(params.edgeMode) {
             case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rgb, 1.);
-            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.texcoord, i.offset, SMAA_DepthTex).xyz, 1.);
+            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xyz, 1.);
             default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rgb, 1.);
         }
     }
@@ -337,14 +347,14 @@ float4 SMAA_NeighborhoodBlendingPS( VS_OUTPUT_SMAA i, uniform SMAA_t params) : S
 
 
 //----------------techniques--------------------------------------------------------------------------------------------------
-#ifdef SMAA_UINAME
-    #define SMAA_STRNAME string UIName=SMAA_STRING(SMAA_UINAME)
-    #undef SMAA_UINAME
-#else
-    #define SMAA_STRNAME
-#endif
 
-#define SMAA_PASS0(p) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); SMAA_STRNAME; > {\
+#define SMAA_PASS0(p) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); > {\
+    pass EdgeDetection {\
+        SetVertexShader(CompileShader(vs_5_0, SMAA_edgeDetectionVS(p)));\
+        SetPixelShader(CompileShader(ps_5_0, SMAA_edgeDetectionPS(p)));\
+    }\
+}
+#define SMAA_PASS0_NAMED(p, name) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); string UIName = name ; > {\
     pass EdgeDetection {\
         SetVertexShader(CompileShader(vs_5_0, SMAA_edgeDetectionVS(p)));\
         SetPixelShader(CompileShader(ps_5_0, SMAA_edgeDetectionPS(p)));\
@@ -356,7 +366,7 @@ float4 SMAA_NeighborhoodBlendingPS( VS_OUTPUT_SMAA i, uniform SMAA_t params) : S
         SetPixelShader(CompileShader(ps_5_0, SMAA_blendingWeightCalcPS(p)));\
     }\
 }
-#define SMAA_PASS2 {\
+#define SMAA_PASS2(p) {\
     pass NeighborhoodBlending {\
         SetVertexShader(CompileShader(vs_5_0, SMAA_neighborhoodBlendingVS(p)));\
         SetPixelShader(CompileShader(ps_5_0, SMAA_NeighborhoodBlendingPS(p)));\

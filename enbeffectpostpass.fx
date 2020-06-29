@@ -62,8 +62,8 @@ Texture2D			RenderTargetR16F; //R16F 16 bit hdr format with red channel only
 Texture2D			RenderTargetR32F; //R32F 32 bit hdr format with red channel only
 Texture2D			RenderTargetRGB32F; //32 bit hdr format without alpha
 
-#define  SMAA_UINAME 1 
-#define  PASSNAME0   SMAA
-#define  PASSNAME1   SMAA1
-#define  PASSNAME2   SMAA2
-#include "enbsmaa.fx" 
+#include "enbsmaa.fx"
+
+technique myTech    SMAA_PASS0_NAMED(  SMAA_Preset_Mid, "smaa")
+technique myTech1   SMAA_PASS1(        SMAA_Preset_Mid)
+technique myTech2   SMAA_PASS2(        SMAA_Preset_Mid)
