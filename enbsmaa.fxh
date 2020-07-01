@@ -172,38 +172,28 @@
 #define SMAA_STRING(a) #a
 //#pragma warning( disable : 3571)
 
-SamplerState SMAA_LinearSamp { Filter = MIN_MAG_LINEAR_MIP_POINT; };
-SamplerState SMAA_PointSamp  { Filter = MIN_MAG_MIP_POINT; };
 struct SMAA_enbTex2D {
-    Texture2D   tex;
+    sampler2D   samp;
     bool        sRGB;
 
     float4 get(float4 col) {
-        //return col <= 0.0031308? (12.92 * col) : (1.055 * pow(col,1./2.4) - 0.055);
-        if (sRGB)   return pow(col, 2.2);
+        if (sRGB)   return pow(col, 1./2.2);
         else        return col;
     }
-    float4 SampleLevel(SamplerState samp, float2 coord, int lod) { return get(tex.SampleLevel(samp, coord, lod)); }
-    float4 SampleLevel(SamplerState samp, float2 coord, int lod, float2 off) { return get(tex.SampleLevel(samp, coord, lod, off)); }
-    float4 Sample(SamplerState samp, float2 coord) { return get(tex.Sample(samp,coord)); }
-    float4 Sample(SamplerState samp, float2 coord, int2 offset) { return get(tex.Sample(samp,coord,offset)); }
-    float4 Load(int3 pos, int2 offset) { return get(tex.Load(pos, offset)); } // only used in multi-sample shader
-    float4 Gather(SamplerState samp, float2 loc, int2 offset) { return get(tex.Gather(samp, loc, offset)); }
 };
 
-#define SMAA_CUSTOM_SL
-#define SMAATexture2D(tex) SMAA_enbTex2D tex
-#define SMAATexturePass2D(tex) tex
-#define SMAASampleLevelZero(tex, coord) tex.SampleLevel(SMAA_LinearSamp, coord, 0)
-#define SMAASampleLevelZeroPoint(tex, coord) tex.SampleLevel(SMAA_PointSamp, coord, 0)
-#define SMAASampleLevelZeroOffset(tex, coord, offset) tex.SampleLevel(SMAA_LinearSamp, coord, 0, offset)
-#define SMAASample(tex, coord) tex.Sample(SMAA_LinearSamp, coord)
-#define SMAASamplePoint(tex, coord) tex.Sample(SMAA_PointSamp, coord)
-#define SMAASampleOffset(tex, coord, offset) tex.Sample(SMAA_LinearSamp, coord, offset)
+#define SMAATexture2D(tex)                              SMAA_enbTex2D tex
+#define SMAATexturePass2D(tex)                          tex
+#define SMAASampleLevelZero(tex, coord)                 tex.get( tex2Dlod(tex.samp, float4(coord, 0.0, 0.0) ))
+#define SMAASampleLevelZeroPoint(tex, coord)            tex.get( tex2Dlod(tex.samp, float4(coord, 0.0, 0.0) ))
+#define SMAASampleLevelZeroOffset(tex, coord, offset)   tex.get( tex2Dlod(tex.samp, float4(coord + offset * SMAA_RT_METRICS.xy, 0.0, 0.0)))
+#define SMAASample(tex, coord)                          tex.get( tex2D(tex.samp, coord))
+#define SMAASamplePoint(tex, coord)                     tex.get( tex2D(tex.samp, coord))
+#define SMAASampleOffset(tex, coord, offset)            tex.get( tex2D(tex.samp, coord + offset * SMAA_RT_METRICS.xy))
 #define SMAA_FLATTEN [flatten]
 #define SMAA_BRANCH [branch]
-#define SMAAGather(tex, coord) tex.Gather(SMAA_LinearSamp, coord, (int2)0)
-#define SMAA_RT_METRICS float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
+
+#define SMAA_RT_METRICS             float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
 #define SMAA_THRESHOLD              (smaa_threshold)
 #define SMAA_MAX_SEARCH_STEPS       (smaa_maxSearchSteps)
 #define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag) // 0 == disabled?
@@ -214,7 +204,6 @@ struct SMAA_enbTex2D {
 #define SMAA_PREDICATION_STRENGTH   (pred_strength)
 
 // Wrap SMAA methods into struct, so that the variables are per instance
-#define discard return 0   // this is to address discard but not exit in dx10+
 struct SMAA_pred_t {
     float   smaa_threshold;
     uint    smaa_maxSearchSteps;
@@ -256,7 +245,6 @@ struct SMAA_t {
     #undef  SMAA_PREDICATION
     #include "SMAA/SMAA.hlsl"
 };
-#undef  discard // clean up
 
 static const SMAA_t SMAA_Preset_Low     = { 0, 0.15, 4, 0, 100, 2, true, 0.01, 0.4, 2, 3 };
 static const SMAA_t SMAA_Preset_Medium  = { 0, 0.1,  8, 0, 100, 2, true, 0.01, 0.4, 2, 3 };
@@ -270,8 +258,6 @@ static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, 2, true, 0.01, 0
 #define SMAA_BLEND_TEX  RenderTargetRGBA64
 #endif
 
-
-//uint    var##_Stagetex           < string UIName= prefix " Show Stage Tex";        int UIMin=0; int    UIMax=3;    > = {3};
 //-------------------Internal resource & helpers-------------------------------------------------------------------------------
 #define SMAA_UI( prefix, var  ) \
 uint    var##_edgeMode           < string UIName= prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
@@ -298,22 +284,28 @@ static const SMAA_t var = {\
     var##_scaleP, 3\
 };
 
+// note, the edge detection wants "gamma encoded" tex
+#define SMAA_TEX(name, tex, gamma) sampler2D name##_s = sampler_state { \
+    Texture   = <tex>; SRGBTexture=FALSE; \
+    MinFilter = LINEAR; MagFilter = LINEAR; \
+    AddressU  = Clamp; AddressV  = Clamp; \
+}; static const SMAA_enbTex2D name = { name##s, gamma }
+
 // Assests --------------------------------------------------------------------------------------------------------------------
 
-Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/SMAA_AreaTex.dds";   >;
-Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SMAA_SearchTex.dds"; >;
+texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/SMAA_AreaTex.dds";   >;
+texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SMAA_SearchTex.dds"; >;
 
-static const SMAA_enbTex2D  SMAA_AreaTex        = { SMAA_enbAreaTex, false };
-static const SMAA_enbTex2D  SMAA_SearchTex      = { SMAA_enbAreaTex, false };
-static const SMAA_enbTex2D  SMAA_ColorTex       = { TextureColor, false };
-static const SMAA_enbTex2D  SMAA_ColorTexGamma  = { TextureColor, true };   // sRGB texture
-static const SMAA_enbTex2D  SMAA_DepthTex       = { TextureDepth, false };
-static const SMAA_enbTex2D  SMAA_EdgeTex        = { SMAA_EDGE_TEX, false};
-static const SMAA_enbTex2D  SMAA_BlendTex       = { SMAA_BLEND_TEX, false};
+SMAA_TEX(SMAA_AreaTex,       SMAA_enbAreaTex,   false );
+SMAA_TEX(SMAA_SearchTex,     SMAA_enbSearchTex, false );
+SMAA_TEX(SMAA_ColorTex,      texColor,          false );
+SMAA_TEX(SMAA_ColorTexGamma, texColor,          true  );
+SMAA_TEX(SMAA_DepthTex,      texDepth,          false );
+SMAA_TEX(SMAA_EdgeTex,       SMAA_EDGE_TEX,     false );
+SMAA_TEX(SMAA_BlendTex,      SMAA_BLEND_TEX,    false );
 
-struct SMAA_VS_Struct
-{
-    float4 pos       : SV_POSITION;
+struct SMAA_VS_Struct {
+    float4 pos       : POSITION;
     float4 uv        : TEXCOORD0;
     float4 offset[3] : TEXCOORD1;
 };
@@ -324,16 +316,16 @@ void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
     io.pos.w = 1.;
 }
 
-float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
+float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
     if (params.pred_enabled) {
         switch(params.edgeMode) {
-            case 1:  return float4(params.pred().SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
+            case 1:  return float4(params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
             case 2:  return float4(params.pred().SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy, 0, 1);
             default: return float4(params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
         }
     } else {
         switch(params.edgeMode) {
-            case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
+            case 1:  return float4(params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
             case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy, 0, 1);
             default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
         }
@@ -346,8 +338,8 @@ void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) 
     io.pos.w = 1.;
 }
 
-float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
-    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).a < .5) return 0;
+float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
+    if(SMAA_EdgeTex.Load(i.pos.xyw).a < .5) discard;
     return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 
@@ -357,11 +349,11 @@ void SMAA_neighborhoodBlendingVS( inout SMAA_VS_Struct io, uniform SMAA_t params
     io.pos.w = 1.;
 }
 
-float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
+float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
     switch (params.stage) {
-        case 0:  return SMAA_ColorTex.tex.Load(i.pos.xyw);
-        case 1:  return SMAA_EdgeTex.tex.Load(i.pos.xyw);
-        case 2:  return SMAA_BlendTex.tex.Load(i.pos.xyw);
+        case 0:  return tex2D(SMAA_ColorTex.samp, i.uv.xy);
+        case 1:  return tex2D(SMAA_EdgeTex.samp,  i.uv.xy);
+        case 2:  return tex2D(SMAA_BlendTex.samp, i.uv.xy);
         default: return params.SMAANeighborhoodBlendingPS( i.uv.xy, i.offset[0], SMAA_ColorTex, SMAA_BlendTex);
     }
 }
@@ -370,26 +362,26 @@ float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : S
 
 #define SMAA_PASS0(p) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); > {\
     pass EdgeDetection {\
-        SetVertexShader(CompileShader(vs_5_0, SMAA_edgeDetectionVS(p)));\
-        SetPixelShader(CompileShader(ps_5_0, SMAA_edgeDetectionPS(p)));\
+        VertexShader = compile vs_3_0 SMAA_edgeDetectionVS(p);\
+        PixelShader  = compile ps_3_0 SMAA_edgeDetectionPS(p);\
     }\
 }
 #define SMAA_PASS0_NAMED(p, name) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); string UIName = name ; > {\
     pass EdgeDetection {\
-        SetVertexShader(CompileShader(vs_5_0, SMAA_edgeDetectionVS(p)));\
-        SetPixelShader(CompileShader(ps_5_0, SMAA_edgeDetectionPS(p)));\
+        VertexShader = compile vs_3_0 SMAA_edgeDetectionVS(p);\
+        PixelShader  = compile ps_3_0 SMAA_edgeDetectionPS(p);\
     }\
 }
 #define SMAA_PASS1(p) <string RenderTarget=SMAA_STRING(SMAA_BLEND_TEX);> {\
     pass BlendingWeightCalculation {\
-        SetVertexShader(CompileShader(vs_5_0, SMAA_blendingWeightCalcVS(p)));\
-        SetPixelShader(CompileShader(ps_5_0, SMAA_blendingWeightCalcPS(p)));\
+        VertexShader = compile vs_3_0 SMAA_blendingWeightCalcVS(p);\
+        PixelShader  = compile ps_3_0 SMAA_blendingWeightCalcPS(p);\
     }\
 }
 #define SMAA_PASS2(p) {\
     pass NeighborhoodBlending {\
-        SetVertexShader(CompileShader(vs_5_0, SMAA_neighborhoodBlendingVS(p)));\
-        SetPixelShader(CompileShader(ps_5_0, SMAA_NeighborhoodBlendingPS(p)));\
+        VertexShader = compile vs_3_0 SMAA_neighborhoodBlendingVS(p);\
+        PixelShader  = compile ps_3_0 SMAA_NeighborhoodBlendingPS(p);\
     }\
 }
 #endif  // SMAA.fxh
