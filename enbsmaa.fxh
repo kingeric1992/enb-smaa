@@ -38,17 +38,18 @@
  *          static const SMAA_t myPreset = myPresetSetter() {
  *              SMAA_t o;
  *                  o.edgeMode           =
- *                  o.threshold          =
- *                  o.maxSearchSteps     =
- *                  o.maxSearchStepsDiag =
- *                  o.cornerRounding     =
- *                  o.contraAdapt        =
+ *                  o.stage              =
+ *
+ *                  o.smaa_threshold          =
+ *                  o.smaa_maxSearchSteps     =
+ *                  o.smaa_maxSearchStepsDiag =
+ *                  o.smaa_cornerRounding     =
+ *                  o.smaa_adaptFactor        =
  *
  *                  o.pred_enabled       =
  *                  o.pred_threshold     =
  *                  o.pred_strength      =
  *                  o.pred_scale         =
- *                  o.stage              =
  *              return o;
  *          }
  *  And use it in the techniques
@@ -169,6 +170,7 @@
 
 
 #define SMAA_STRING(a) #a
+//#pragma warning( disable : 3571)
 
 SamplerState SMAA_LinearSamp { Filter = MIN_MAG_LINEAR_MIP_POINT; };
 SamplerState SMAA_PointSamp  { Filter = MIN_MAG_MIP_POINT; };
@@ -183,6 +185,8 @@ struct SMAA_enbTex2D {
     }
     float4 SampleLevel(SamplerState samp, float2 coord, int lod) { return get(tex.SampleLevel(samp, coord, lod)); }
     float4 SampleLevel(SamplerState samp, float2 coord, int lod, float2 off) { return get(tex.SampleLevel(samp, coord, lod, off)); }
+    float4 Sample(SamplerState samp, float2 coord) { return get(tex.Sample(samp,coord)); }
+    float4 Sample(SamplerState samp, float2 coord, int2 offset) { return get(tex.Sample(samp,coord,offset)); }
     float4 Load(int3 pos, int2 offset) { return get(tex.Load(pos, offset)); } // only used in multi-sample shader
     float4 Gather(SamplerState samp, float2 loc, int2 offset) { return get(tex.Gather(samp, loc, offset)); }
 };
@@ -198,48 +202,66 @@ struct SMAA_enbTex2D {
 #define SMAASampleOffset(tex, coord, offset) tex.Sample(SMAA_LinearSamp, coord, offset)
 #define SMAA_FLATTEN [flatten]
 #define SMAA_BRANCH [branch]
-#define SMAAGather(tex, coord) tex.Gather(LinearSampler, coord, 0)
-#define SMAA_RT_METRICS float2( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
-#define SMAA_THRESHOLD              (threshold)
-#define SMAA_MAX_SEARCH_STEPS       (maxSearchSteps)
-#define SMAA_MAX_SEARCH_STEPS_DIAG  (maxSearchStepDiag) // 0 == disabled?
-#define SMAA_CORNER_ROUNDING        (cornerRounding)
-#define SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR (contraAdapt)
+#define SMAAGather(tex, coord) tex.Gather(SMAA_LinearSamp, coord, (int2)0)
+#define SMAA_RT_METRICS float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
+#define SMAA_THRESHOLD              (smaa_threshold)
+#define SMAA_MAX_SEARCH_STEPS       (smaa_maxSearchSteps)
+#define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag) // 0 == disabled?
+#define SMAA_CORNER_ROUNDING        (smaa_cornerRounding)
+#define SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR (smaa_adaptFactor)
 #define SMAA_PREDICATION_THRESHOLD  (pred_threshold)
 #define SMAA_PREDICATION_SCALE      (pred_scale)
 #define SMAA_PREDICATION_STRENGTH   (pred_strength)
-#define discard return 0   // this is to address discard but not exit in dx10+
+
 // Wrap SMAA methods into struct, so that the variables are per instance
+#define discard return 0   // this is to address discard but not exit in dx10+
+struct SMAA_pred_t {
+    float   smaa_threshold;
+    uint    smaa_maxSearchSteps;
+    uint    smaa_maxSearchStepDiag;
+    uint    smaa_cornerRounding;
+    float   smaa_adaptFactor;   // local contrast adaptation factor
 
-class SMAA_Base_t {
-    uint    edgeMode;  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
-    float   threshold;
-    uint    maxSearchSteps;
-    uint    maxSearchStepDiag;
-    uint    cornerRounding;
-    float   contraAdapt;
-
-    #include "SMAA/SMAA.hlsl"
-};
-
-// this will override func with same signature
-class SMAA_t : SMAA_Base_t {
-    bool    pred_enabled;
     float   pred_threshold;
     float   pred_strength;
     float   pred_scale;
-    uint    stage;     // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
 
-    #undef  SMAA_PREDICATION
     #define SMAA_PREDICATION 1
     #include "SMAA/SMAA.hlsl"
 };
 
-static const SMAA_t SMAA_Preset_Low     = { 0, 0.15, 4, 0, 100, true, 0.01, 0.4, 2, 3 };
-static const SMAA_t SMAA_Preset_Medium  = { 0, 0.1,  8, 0, 100, true, 0.01, 0.4, 2, 3 };
-static const SMAA_t SMAA_Preset_High    = { 0, 0.1, 16, 8,  25, true, 0.01, 0.4, 2, 3 };
-static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, true, 0.01, 0.4, 2, 3 };
+struct SMAA_t {
+    uint    edgeMode;  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
+
+    float   smaa_threshold;
+    uint    smaa_maxSearchSteps;
+    uint    smaa_maxSearchStepDiag;
+    uint    smaa_cornerRounding;
+    float   smaa_adaptFactor;   // local contrast adaptation factor
+
+    bool    pred_enabled;
+    float   pred_threshold;
+    float   pred_strength;
+    float   pred_scale;
+
+    uint    stage;     // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
+
+    SMAA_pred_t pred() {
+        SMAA_pred_t o = {
+            smaa_threshold, smaa_maxSearchSteps, smaa_maxSearchStepDiag, smaa_cornerRounding,
+            smaa_adaptFactor, pred_threshold, pred_strength, pred_scale
+        };
+        return o;
+    }
+    #undef  SMAA_PREDICATION
+    #include "SMAA/SMAA.hlsl"
+};
 #undef  discard // clean up
+
+static const SMAA_t SMAA_Preset_Low     = { 0, 0.15, 4, 0, 100, 2, true, 0.01, 0.4, 2, 3 };
+static const SMAA_t SMAA_Preset_Medium  = { 0, 0.1,  8, 0, 100, 2, true, 0.01, 0.4, 2, 3 };
+static const SMAA_t SMAA_Preset_High    = { 0, 0.1, 16, 8,  25, 2, true, 0.01, 0.4, 2, 3 };
+static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, 2, true, 0.01, 0.4, 2, 3 };
 
 #ifndef SMAA_EDGE_TEX
 #define SMAA_EDGE_TEX   RenderTargetRGB32F
@@ -248,6 +270,8 @@ static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, true, 0.01, 0.4,
 #define SMAA_BLEND_TEX  RenderTargetRGBA64
 #endif
 
+
+//uint    var##_Stagetex           < string UIName= prefix " Show Stage Tex";        int UIMin=0; int    UIMax=3;    > = {3};
 //-------------------Internal resource & helpers-------------------------------------------------------------------------------
 #define SMAA_UI( prefix, var  ) \
 uint    var##_edgeMode           < string UIName= prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
@@ -260,7 +284,6 @@ bool    var##_predication        < string UIName= prefix " Predication";        
 uint    var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
 uint    var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
 uint    var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
-uint    var##_Stagetex           < string UIName= prefix " Show Stage Tex";        int UIMin=0; int    UIMax=3;    > = {3};\
 \
 static const SMAA_t var = {\
     var##_edgeMode,\
@@ -272,8 +295,7 @@ static const SMAA_t var = {\
     var##_predication,\
     var##_thresholdP,\
     var##_strengthP,\
-    var##_scaleP,\
-    var##_Stagetex\
+    var##_scaleP, 3\
 };
 
 // Assests --------------------------------------------------------------------------------------------------------------------
@@ -297,7 +319,7 @@ struct SMAA_VS_Struct
 };
 
 //----------------------------------------------------------------------------------------------------------------------------
-void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t parmas) {
+void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
     params.SMAAEdgeDetectionVS(io.uv.xy, io.offset);
     io.pos.w = 1.;
 }
@@ -305,15 +327,15 @@ void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t parmas) {
 float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
     if (params.pred_enabled) {
         switch(params.edgeMode) {
-            case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rgb, 1.);
-            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xyz, 1.);
-            default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rgb, 1.);
+            case 1:  return float4(params.pred().SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
+            case 2:  return float4(params.pred().SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy, 0, 1);
+            default: return float4(params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
         }
     } else {
         switch(params.edgeMode) {
-            case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rgb, 1.);
-            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xyz, 1.);
-            default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rgb, 1.);
+            case 1:  return float4(params.SMAALumaEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
+            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy, 0, 1);
+            default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
         }
     }
 }
@@ -335,7 +357,7 @@ void SMAA_neighborhoodBlendingVS( inout SMAA_VS_Struct io, uniform SMAA_t params
     io.pos.w = 1.;
 }
 
-float4 SMAA_NeighborhoodBlendingPS( VS_OUTPUT_SMAA i, uniform SMAA_t params) : SV_Target {
+float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
     switch (params.stage) {
         case 0:  return SMAA_ColorTex.tex.Load(i.pos.xyw);
         case 1:  return SMAA_EdgeTex.tex.Load(i.pos.xyw);
@@ -343,8 +365,6 @@ float4 SMAA_NeighborhoodBlendingPS( VS_OUTPUT_SMAA i, uniform SMAA_t params) : S
         default: return params.SMAANeighborhoodBlendingPS( i.uv.xy, i.offset[0], SMAA_ColorTex, SMAA_BlendTex);
     }
 }
-#endif  // SMAA.fxh
-
 
 //----------------techniques--------------------------------------------------------------------------------------------------
 
@@ -372,3 +392,4 @@ float4 SMAA_NeighborhoodBlendingPS( VS_OUTPUT_SMAA i, uniform SMAA_t params) : S
         SetPixelShader(CompileShader(ps_5_0, SMAA_NeighborhoodBlendingPS(p)));\
     }\
 }
+#endif  // SMAA.fxh

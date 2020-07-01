@@ -13,8 +13,6 @@
 float4	Timer;
 //x = Width, y = 1/Width, z = aspect, w = 1/aspect, aspect is Width/Height
 float4	ScreenSize;
-//changes in range 0..1, 0 means full quality, 1 lowest dynamic quality (0.33, 0.66 are limits for quality levels)
-float	AdaptiveQuality;
 //x = current weather index, y = outgoing weather index, z = weather transition, w = time of the day in 24 standart hours. Weather index is value from weather ini file, for example WEATHER002 means index==2, but index==0 means that weather not captured.
 float4	Weather;
 //x = dawn, y = sunrise, z = day, w = sunset. Interpolators range from 0..1
@@ -25,6 +23,8 @@ float4	TimeOfDay2;
 float	ENightDayFactor;
 //changes 0 or 1. 0 means that exterior, 1 - interior
 float	EInteriorFactor;
+//changes in range 0..1, 0 means full quality, 1 lowest dynamic quality (0.33, 0.66 are limits for quality levels)
+float	AdaptiveQuality;
 
 //+++++++++++++++++++++++++++++
 //external enb debugging parameters for shader programmers, do not modify
@@ -62,8 +62,43 @@ Texture2D			RenderTargetR16F; //R16F 16 bit hdr format with red channel only
 Texture2D			RenderTargetR32F; //R32F 32 bit hdr format with red channel only
 Texture2D			RenderTargetRGB32F; //32 bit hdr format without alpha
 
-#include "enbsmaa.fx"
+#include "enbsmaa.fxh"
 
-technique myTech    SMAA_PASS0_NAMED(  SMAA_Preset_Mid, "smaa")
-technique myTech1   SMAA_PASS1(        SMAA_Preset_Mid)
-technique myTech2   SMAA_PASS2(        SMAA_Preset_Mid)
+// use built-in UI helper
+SMAA_UI( "SMAA", g0 )
+
+// build custom preset
+uniform uint SMAA_Stage < string UIName = "SMAA Debug Stage"; int UIMin = 0; int uiMax = 3; > = {3};
+SMAA_t myPresetGet() {
+    SMAA_t o = SMAA_Preset_Ultra; // can be based on existing preset;
+    o.pred_enabled = false;
+    o.stage = SMAA_Stage;
+    return o;
+}
+
+//alternatively
+uniform uint SMAA_Quality < string UIName = "SMAA Quality"; int UIMin = 0; int uiMax = 4; > = {0};
+static const SMAA_t presetArr[5] = {
+    SMAA_Preset_Low,
+    SMAA_Preset_Medium,
+    SMAA_Preset_High,
+    SMAA_Preset_Ultra,
+    g0
+};
+
+technique11 myTech    SMAA_PASS0_NAMED(  SMAA_Preset_Medium, "smaa")
+technique11 myTech1   SMAA_PASS1(        SMAA_Preset_Medium)
+technique11 myTech2   SMAA_PASS2(        SMAA_Preset_Medium)
+
+// use the custom preset created by UI helper
+technique11 myTech3   SMAA_PASS0( g0 )
+technique11 myTech4   SMAA_PASS1( g0 )
+technique11 myTech5   SMAA_PASS2( g0 )
+
+technique11 myTech6   SMAA_PASS0( myPresetGet() )
+technique11 myTech7   SMAA_PASS1( myPresetGet() )
+technique11 myTech8   SMAA_PASS2( myPresetGet() )
+
+technique11 myTech9   SMAA_PASS0( presetArr[SMAA_Quality] )
+technique11 myTech10  SMAA_PASS1( presetArr[SMAA_Quality] )
+technique11 myTech11  SMAA_PASS2( presetArr[SMAA_Quality] )
