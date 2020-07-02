@@ -193,66 +193,18 @@ struct SMAA_enbTex2D {
 #define SMAASampleOffset(tex, coord, offset)            tex.get( tex2D(tex.samp, coord + offset * SMAA_RT_METRICS.xy))
 #define SMAA_FLATTEN [flatten]
 #define SMAA_BRANCH [branch]
+#define SMAA_RT_METRICS float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
 
-#define SMAA_RT_METRICS             float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
-#define SMAA_THRESHOLD              (smaa_threshold)
-#define SMAA_MAX_SEARCH_STEPS       (smaa_maxSearchSteps)
-#define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag) // 0 == disabled?
-#define SMAA_CORNER_ROUNDING        (smaa_cornerRounding)
-#define SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR (smaa_adaptFactor)
-#define SMAA_PREDICATION_THRESHOLD  (pred_threshold)
-#define SMAA_PREDICATION_SCALE      (pred_scale)
-#define SMAA_PREDICATION_STRENGTH   (pred_strength)
 
 #define discard return -1
 // Wrap SMAA methods into struct, so that the variables are per instance
-struct SMAA_pred_t {
-    float   smaa_threshold;
-    int     smaa_maxSearchSteps;
-    int     smaa_maxSearchStepDiag;
-    int     smaa_cornerRounding;
-    float   smaa_adaptFactor;   // local contrast adaptation factor
-
-    float   pred_threshold;
-    float   pred_strength;
-    float   pred_scale;
+struct SMAA_static_t {
 
     // had to modify the SMAA
     #define SMAA_PREDICATION 1
     #include "SMAA/SMAA.hlsl"
 };
-struct SMAA_t {
-    int     edgeMode;  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
-
-    float   smaa_threshold;
-    int     smaa_maxSearchSteps;
-    int     smaa_maxSearchStepDiag;
-    int     smaa_cornerRounding;
-    float   smaa_adaptFactor;   // local contrast adaptation factor
-
-    bool    pred_enabled;
-    float   pred_threshold;
-    float   pred_strength;
-    float   pred_scale;
-
-    int     stage;     // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
-
-    SMAA_pred_t pred() {
-        SMAA_pred_t o = {
-            smaa_threshold, smaa_maxSearchSteps, smaa_maxSearchStepDiag, smaa_cornerRounding,
-            smaa_adaptFactor, pred_threshold, pred_strength, pred_scale
-        };
-        return o;
-    }
-    #undef  SMAA_PREDICATION
-    #include "SMAA/SMAA.hlsl"
-};
 #undef discard
-
-static const SMAA_t SMAA_Preset_Low     = { 0, 0.15, 4, 0, 100, 2, true, 0.01, 0.4, 2, 3 };
-static const SMAA_t SMAA_Preset_Medium  = { 0, 0.1,  8, 0, 100, 2, true, 0.01, 0.4, 2, 3 };
-static const SMAA_t SMAA_Preset_High    = { 0, 0.1, 16, 8,  25, 2, true, 0.01, 0.4, 2, 3 };
-static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, 2, true, 0.01, 0.4, 2, 3 };
 
 #ifndef SMAA_EDGE_TEX
 #define SMAA_EDGE_TEX   RenderTargetRGBA32
@@ -262,30 +214,6 @@ static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, 2, true, 0.01, 0
 #endif
 
 //-------------------Internal resource & helpers-------------------------------------------------------------------------------
-#define SMAA_UI( prefix, var  ) \
-int     var##_edgeMode           < string UIName= prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
-float   var##_threshold          < string UIName= prefix " Threshold";             int UIMin=0; float  UIMax=0.5;  > = {0.15};\
-int     var##_maxSearchSteps     < string UIName= prefix " Search Steps";          int UIMin=0; int    UIMax=98;   > = {64};\
-int     var##_maxSearchStepsDiag < string UIName= prefix " Diagonal Search Steps"; int UIMin=0; int    UIMax=20;   > = {16};\
-int     var##_cornerRounding     < string UIName= prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
-float   var##_contraAdapt        < string UIName= prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
-bool    var##_predication        < string UIName= prefix " Predication";           > = {true};\
-int     var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
-int     var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
-int     var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
-\
-static const SMAA_t var = {\
-    var##_edgeMode,\
-    var##_threshold,\
-    var##_maxSearchSteps,\
-    var##_maxSearchStepsDiag,\
-    var##_cornerRounding,\
-    var##_contraAdapt,\
-    var##_predication,\
-    var##_thresholdP,\
-    var##_strengthP,\
-    var##_scaleP, 3\
-};
 
 // note, the edge detection wants "gamma encoded" tex
 #define SMAA_TEX(name, tex, gamma) sampler2D name##_s = sampler_state { \
