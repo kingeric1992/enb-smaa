@@ -209,7 +209,7 @@ struct SMAA_enbTex2D {
 #define SMAA_PREDICATION_STRENGTH   (pred_strength)
 
 // Wrap SMAA methods into struct, so that the variables are per instance
-#define discard return 0   // this is to address discard but not exit in dx10+
+#define discard return -1   // this is to address discard but not exit in dx10+
 struct SMAA_pred_t {
     float   smaa_threshold;
     uint    smaa_maxSearchSteps;
@@ -316,20 +316,23 @@ void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
     io.pos.w = 1.;
 }
 
+// todo: test performance of different flags
 float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
+    float2 res = 0;
     if (params.pred_enabled) {
         switch(params.edgeMode) {
-            case 1:  return float4(params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
-            case 2:  return float4(params.pred().SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy, 0, 1);
-            default: return float4(params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg, 0, 1);
+            case 1:  res = params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg; break;
+            case 2:  res = params.pred().SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy; break;
+            default: res = params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg; break;
         }
     } else {
         switch(params.edgeMode) {
-            case 1:  return float4(params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
-            case 2:  return float4(params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy, 0, 1);
-            default: return float4(params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg, 0, 1);
+            case 1:  res = params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg; break;
+            case 2:  res = params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy; break;
+            default: res = params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg; break;
         }
     }
+    return float4(res, 0, res.x < 0); // res.xy = -1 when no edges.
 }
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -339,7 +342,7 @@ void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) 
 }
 
 float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
-    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).a < .5) return 0;
+    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).a > .5) return 0;
     return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 
@@ -349,6 +352,7 @@ void SMAA_neighborhoodBlendingVS( inout SMAA_VS_Struct io, uniform SMAA_t params
     io.pos.w = 1.;
 }
 
+// todo: test performance of different flags
 float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
     switch (params.stage) {
         case 0:  return SMAA_ColorTex.tex.Load(i.pos.xyw);

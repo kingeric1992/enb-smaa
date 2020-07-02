@@ -62,6 +62,7 @@ Texture2D			RenderTargetR16F; //R16F 16 bit hdr format with red channel only
 Texture2D			RenderTargetR32F; //R32F 32 bit hdr format with red channel only
 Texture2D			RenderTargetRGB32F; //32 bit hdr format without alpha
 
+// change including path if required.
 #include "enbsmaa.fxh"
 
 // use built-in UI helper
@@ -87,18 +88,18 @@ static const SMAA_t presetArr[5] = {
 };
 
 technique11 myTech    SMAA_PASS0_NAMED(  SMAA_Preset_Medium, "smaa")
-technique11 myTech1   SMAA_PASS1(        SMAA_Preset_Medium)
-technique11 myTech2   SMAA_PASS2(        SMAA_Preset_Medium)
+technique11 myTech2   SMAA_PASS1(        SMAA_Preset_Medium)
+technique11 myTech3   SMAA_PASS2(        SMAA_Preset_Medium)
 
 // use the custom preset created by UI helper
-technique11 myTech3   SMAA_PASS0( g0 )
-technique11 myTech4   SMAA_PASS1( g0 )
-technique11 myTech5   SMAA_PASS2( g0 )
+technique11 myTech4   SMAA_PASS0( g0 )
+technique11 myTech5   SMAA_PASS1( g0 )
+technique11 myTech6   SMAA_PASS2( g0 )
 
-technique11 myTech6   SMAA_PASS0( myPresetGet() )
-technique11 myTech7   SMAA_PASS1( myPresetGet() )
-technique11 myTech8   SMAA_PASS2( myPresetGet() )
+technique11 myTech7   SMAA_PASS0( myPresetGet() )
+technique11 myTech8   SMAA_PASS1( myPresetGet() )
+technique11 myTech9   SMAA_PASS2( myPresetGet() )
 
-technique11 myTech9   SMAA_PASS0( presetArr[SMAA_Quality] )
-technique11 myTech10  SMAA_PASS1( presetArr[SMAA_Quality] )
-technique11 myTech11  SMAA_PASS2( presetArr[SMAA_Quality] )
+technique11 myTech10  SMAA_PASS0( presetArr[SMAA_Quality] )
+technique11 myTech11  SMAA_PASS1( presetArr[SMAA_Quality] )
+technique11 myTech12  SMAA_PASS2( presetArr[SMAA_Quality] )
