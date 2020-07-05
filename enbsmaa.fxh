@@ -3,74 +3,82 @@
 /*===========================================================================================
  *                                 file descriptions
 =============================================================================================
- * implemented to enbeffectpostpass.fx by kingeric1992 for Fallout4/SkyrimSE ENB mod 0.288+
- *                                                                      update.  June/30/2020
- *      for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
+ *  Dx9 (SM30) SMAA 1x wrapper for Enbseries 0.288+ by kingeric1992
  *
- ** Only SMAA 1x is avaliable
+ *  for SMAA parameter descriptions, refers to SMAA.hlsl
+ *  for reference SMAA, visit https://github.com/iryoku/smaa
+ *  for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
+ *                      or https://github.com/kingeric1992/enb-smaa
+ *                                                                      update.  July/6/2020
+ *  note: SMAA.hlsl was modified for dx9 compatibility.
  *
- * SMAA T2x requires moving camera in sub pixel jitters.
- * SMAA S2x requires MSAA 2x buffer
- * SMAA 4x  requires both of the above
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+=============================================================================================
  *  Usage:
  *      Adding
  *          #include "enbsmaa.fxh"
  *                  after other enb resources, use existing preset ( or create new ones ),
  *  and insert SMAA techniques into your technique sections.
  *
- *          technique11 myTechniques3 {...}
- *          technique11 myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
- *          technique11 myTechniques5 SMAA_PASS1(SMAA_Preset_Low)
- *          technique11 myTechniques6 SMAA_PASS2(SMAA_Preset_Low)
- *          technique11 myTechniques7 {...}
+ *          technique myTechniques3 {...}
+ *          technique myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
+ *          technique myTechniques5 SMAA_PASS1(SMAA_Preset_Low)
+ *          technique myTechniques6 SMAA_PASS2(SMAA_Preset_Low)
+ *          technique myTechniques7 {...}
  *
  *  To use SMAA in first pass
- *          technique11 myTechniques  SMAA_PASS0_NAME(  SMAA_Preset_Mid, "smaa demo")
- *          technique11 myTechniques2 SMAA_PASS1(       SMAA_Preset_Mid)
- *          technique11 myTechniques3 SMAA_PASS2(       SMAA_Preset_Mid)
- *          technique11 myTechniques4 {...}
+ *          technique myTechniques  SMAA_PASS0_NAME(  SMAA_Preset_Mid, "smaa demo")
+ *          technique myTechniques2 SMAA_PASS1(       SMAA_Preset_Mid)
+ *          technique myTechniques3 SMAA_PASS2(       SMAA_Preset_Mid)
+ *          technique myTechniques4 {...}
  *
  *  Presets includes SMAA_Preset_Low, SMAA_Preset_Mid, SMAA_Preset_High, SMAA_Preset_Ultra
  *
- *  To create custom preset, fill-in the SMAA_t struct directly
+ *  To create custom preset, fill-in the SMAA_t struct directly with helper function,
  *          static const SMAA_t myPreset = myPresetSetter() {
  *              SMAA_t o;
- *                  o.edgeMode           =
- *                  o.stage              =
+ *                  o.edgeMode           =  // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
+ *                  o.stage              =  // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
  *
  *                  o.smaa_threshold          =
  *                  o.smaa_maxSearchSteps     =
  *                  o.smaa_maxSearchStepsDiag =
  *                  o.smaa_cornerRounding     =
- *                  o.smaa_adaptFactor        =
+ *                  o.smaa_adaptFactor        = // local contrast adaptation factor
  *
- *                  o.pred_enabled       =
+ *                  o.pred_enabled       =  // use predication
  *                  o.pred_threshold     =
  *                  o.pred_strength      =
  *                  o.pred_scale         =
  *              return o;
  *          }
+ *  Or directly
+ *          static const SMAA_t myPreset = {
+ *              edgeMode,
+ *              smaa_threshold, smaa_maxSearchSteps, smaa_maxSearchStepDiag,
+ *              smaa_cornerRounding, smaa_adaptFactor,
+ *              pred_enabled,
+ *              pred_threshold, pred_strength, pred_scale,
+ *              stage
+ *          }
  *  And use it in the techniques
  *
- *          technique11 myTechniques3 {...}
- *          technique11 myTechniques4 SMAA_PASS0(myPreset)
- *          technique11 myTechniques5 SMAA_PASS1(myPreset)
- *          technique11 myTechniques6 SMAA_PASS2(myPreset)
- *          technique11 myTechniques7 {...}
+ *          technique myTechniques3 {...}
+ *          technique myTechniques4 SMAA_PASS0(myPreset)
+ *          technique myTechniques5 SMAA_PASS1(myPreset)
+ *          technique myTechniques6 SMAA_PASS2(myPreset)
+ *          technique myTechniques7 {...}
  *
  *  The SMAA header also includes a helper macro to create UI preset
  *
  *          SMAA_UI( "UI Prefix ", myUIPreset )
  *
- *  Where the "UI Prefix" is what will be prepend to UI elements.
+ *  Where the "UI Prefix" is what will be prepend to UI names.
  *
- *          technique11 myTechniques3 {...}
- *          technique11 myTechniques4 SMAA_PASS0(myUIPreset)
- *          technique11 myTechniques5 SMAA_PASS1(myUIPreset)
- *          technique11 myTechniques6 SMAA_PASS2(myUIPreset)
- *          technique11 myTechniques7 {...}
+ *          technique myTechniques3 {...}
+ *          technique myTechniques4 SMAA_PASS0(myUIPreset)
+ *          technique myTechniques5 SMAA_PASS1(myUIPreset)
+ *          technique myTechniques6 SMAA_PASS2(myUIPreset)
+ *          technique myTechniques7 {...}
  *
  * in addition, you can change internal rendertarget with :
  *
@@ -79,93 +87,6 @@
  *
  *                                          prior to inclueing "enbsmaa.fx"
  *
-============================================================================================*/
-
-/*============================================================================================
- * the following descriptions is provided in SMAA.h.
- *                                  for more detial on SMAA, visit http://www.iryoku.com/smaa/
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_THRESHOLD specifies the threshold or sensitivity to edges.
- * Lowering this value you will be able to detect more edges at the expense of performance.
- *
- *      Range: [0, 0.5]
- *        0.1 is a reasonable value, and allows to catch most visible edges.
- *        0.05 is a rather overkill value, that allows to catch 'em all.
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *
- * SMAA_MAX_SEARCH_STEPS specifies the maximum steps performed in the horizontal/vertical
- * pattern searches, at each side of the pixel.
- *
- *      Range: [0, 98]
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *
- * SMAA_MAX_SEARCH_STEPS_DIAG specifies the maximum steps performed in the diagonal pattern
- * searches, at each side of the pixel. In this case we jump one pixel at time, instead of two.
- *
- *      Range: [0, 20]; set it to 0 to disable diagonal processing.
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *
- * SMAA_CORNER_ROUNDING specifies how much sharp corners will be rounded.
- *
- *      Range: [0, 100]; set it to 100 to disable corner detection.
- *
-=============================================================================================
- *                          Predicated thresholding
-=============================================================================================
- * Predicated thresholding allows to better preserve texture details and to improve performance,
- * by decreasing the number of detected edges using an additional buffer like the light
- * accumulation buffer, object ids or even the depth buffer (the depth buffer usage may be
- * limited to indoor or short range scenes).
- *
- * It locally decreases the luma or color threshold if an edge is found in an additional buffer
- * (so the global threshold can be higher).
- *
- * This method was developed by Playstation EDGE MLAA team, and used in
- * Killzone 3, by using the light accumulation buffer. More information here:
- *     http://iryoku.com/aacourse/downloads/06-MLAA-on-PS3.pptx
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_PREDICATION_THRESHOLD: Threshold to be used in the additional predication buffer.
- *
- *      Range: depends on the input, so you'll have to find the magic number that works for you.
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_PREDICATION_SCALE: How much to scale the global threshold used for luma or color
- * edgedetection when using predication.
- *
- *      Range: [1, 5]
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_PREDICATION_STRENGTH:  How much to locally decrease the threshold.
- *
- *      Range: [0, 1]
- *
-=============================================================================================
- *                             Copyright & Redistribution
-=============================================================================================
- * Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
- * Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
- * Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
- * Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
- * Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy this software
- * and associated documentation files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom
- * the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software. As clarification, there is no requirement that the
- * copyright notice and permission be included in binary distributions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-=============================================================================================
- * end of descriptions
 ===========================================================================================*/
 
 
@@ -319,28 +240,22 @@ void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
     io.pos.w = 1.;
 }
 
-float4 SMAA_edgeDetectionPS_Color( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    float2 res = params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg;
-    return float4(res, 0, res.x < 0);
-}
-float4 SMAA_edgeDetectionPS_Luma( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    float2 res = params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg;
-    return float4(res, 0, res.x < 0);
-}
-float4 SMAA_edgeDetectionPS_Depth( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    float2 res = params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy;
-    return float4(res, 0, res.x < 0);
-}
+float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
+    float2 res = 0;
+    int sel = params.edgeMode*2 + params.pred_enabled;
 
-float4 SMAA_edgeDetectionPS_ColorP( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    float2 res = params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
+    [flatten] if (sel == 0)
+        res = params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg;
+    else [flatten] if (sel == 1)
+        res = params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
+    else [flatten] if (sel == 2)
+        res = params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg;
+    else [flatten] if (sel == 3)
+        res = params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
+    else
+        res = params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy;
     return float4(res, 0, res.x < 0);
 }
-float4 SMAA_edgeDetectionPS_LumaP( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    float2 res = params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
-    return float4(res, 0, res.x < 0);
-}
-
 
 //----------------------------------------------------------------------------------------------------------------------------
 void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
@@ -371,27 +286,18 @@ float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : C
 
 //----------------techniques--------------------------------------------------------------------------------------------------
 
-#define SMAA_INIT(p) PixelShader p##_ps[5] = { \
-    compile ps_3_0 SMAA_edgeDetectionPS_Color(p), \
-    compile ps_3_0 SMAA_edgeDetectionPS_ColorP(p), \
-    compile ps_3_0 SMAA_edgeDetectionPS_Luma(p), \
-    compile ps_3_0 SMAA_edgeDetectionPS_LumaP(p),\
-    compile ps_3_0 SMAA_edgeDetectionPS_Depth(p) \
-}
-
 #define SMAA_PASS0(p) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); > {\
     pass EdgeDetection {\
         VertexShader = compile vs_3_0 SMAA_edgeDetectionVS(p);\
-        PixelShader  = p##_ps[ min(4,p.edgeMode*2 + p.pred_enabled) ];\
+        PixelShader  = compile ps_3_0 SMAA_edgeDetectionPS(p);\
     }\
 }
 #define SMAA_PASS0_NAMED(p, name) <string RenderTarget= SMAA_STRING(SMAA_EDGE_TEX); string UIName = name ; > {\
     pass EdgeDetection {\
         VertexShader = compile vs_3_0 SMAA_edgeDetectionVS(p);\
-        PixelShader  = p##_ps[ min(4,p.edgeMode*2 + p.pred_enabled) ];\
+        PixelShader  = compile ps_3_0 SMAA_edgeDetectionPS(p);\
     }\
 }
-
 #define SMAA_PASS1(p) <string RenderTarget=SMAA_STRING(SMAA_BLEND_TEX);> {\
     pass BlendingWeightCalculation {\
         VertexShader = compile vs_3_0 SMAA_blendingWeightCalcVS(p);\
@@ -404,4 +310,4 @@ float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : C
         PixelShader  = compile ps_3_0 SMAA_NeighborhoodBlendingPS(p);\
     }\
 }
-#endif  // SMAA.fxh
+#endif  // enbSMAA.fxh

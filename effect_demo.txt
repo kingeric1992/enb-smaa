@@ -1,0 +1,61 @@
+//--------------------------------------------------------------------------
+// This is a demo file on using enbsmaa.fxh
+//                                                      update.  July/6/2020
+//--------------------------------------------------------------------------
+// Loading enbseries resources.
+
+texture2D   texOriginal;
+texture2D   texColor;
+texture2D   texDepth;
+texture2D   RenderTargetRGBA32;     //R8G8B8A8 32 bit ldr format
+texture2D   RenderTargetRGBA64F;    //R16B16G16A16F 64 bit hdr format
+float4	    ScreenSize;             //x = W, y = 1/W, z = W/H, w = H/W
+
+//--------------------------------------------------------------------------
+// Load wrapper. note: path is relative to enbseres/
+#include "SMAA/enbSMAA.fxh"
+
+// use built-in UI helper
+SMAA_UI( "SMAA", g0 )
+
+// build custom preset
+uniform uint SMAA_Stage < string UIName = "SMAA Debug Stage"; int UIMin = 0; int uiMax = 3; > = {3};
+SMAA_t myPresetGet() {
+    SMAA_t o = SMAA_Preset_Ultra; // can be based on existing preset;
+    o.pred_enabled = false;
+    o.stage = SMAA_Stage;
+    return o;
+}
+
+//alternatively
+uniform int SMAA_Quality < string UIName = "SMAA Quality"; int UIMin = 0; int uiMax = 5; > = {0};
+static const SMAA_t SMAA_ARR[6] = {
+    SMAA_Preset_Low,
+    SMAA_Preset_Medium,
+    SMAA_Preset_High,
+    SMAA_Preset_Ultra,
+    g0,
+    myPresetGet()
+};
+
+//--------------------------------------------------------------------------
+// Techniques
+
+// use preset.
+technique myTech    SMAA_PASS0_NAMED(  SMAA_Preset_Medium, "smaa")
+technique myTech2   SMAA_PASS1(        SMAA_Preset_Medium)
+technique myTech3   SMAA_PASS2(        SMAA_Preset_Medium)
+
+// use the custom preset created by UI helper
+technique myTech4   SMAA_PASS0( g0 )
+technique myTech5   SMAA_PASS1( g0 )
+technique myTech6   SMAA_PASS2( g0 )
+
+// use custom preset built from function.
+technique myTech7   SMAA_PASS0( myPresetGet() )
+technique myTech8   SMAA_PASS1( myPresetGet() )
+technique myTech9   SMAA_PASS2( myPresetGet() )
+
+technique myTech10  SMAA_PASS0( SMAA_ARR[SMAA_Quality] )
+technique myTech11  SMAA_PASS1( SMAA_ARR[SMAA_Quality] )
+technique myTech12  SMAA_PASS2( SMAA_ARR[SMAA_Quality] )
