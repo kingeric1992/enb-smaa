@@ -3,20 +3,19 @@
 /*===========================================================================================
  *                                 file descriptions
 =============================================================================================
- * implemented to enbeffectpostpass.fx by kingeric1992 for Fallout4/SkyrimSE ENB mod 0.288+
- *                                                                      update.  June/30/2020
- *      for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
+ *  Dx11 (SM50) SMAA 1x wrapper for Enbseries 0.288+ by kingeric1992
  *
- ** Only SMAA 1x is avaliable
+ *  for SMAA parameter descriptions, refers to SMAA.hlsl
+ *  for reference SMAA, visit https://github.com/iryoku/smaa
+ *  for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
+ *                      or https://github.com/kingeric1992/enb-smaa
+ *                                                                      update.  July/6/2020
+ *  note: SMAA.hlsl was modified for dx9 compatibility.
  *
- * SMAA T2x requires moving camera in sub pixel jitters.
- * SMAA S2x requires MSAA 2x buffer
- * SMAA 4x  requires both of the above
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+=============================================================================================
  *  Usage:
  *      Adding
- *          #include "enbsmaa.fxh"
+ *          #include "SMAA/enbsmaa.fxh"
  *                  after other enb resources, use existing preset ( or create new ones ),
  *  and insert SMAA techniques into your technique sections.
  *
@@ -79,93 +78,6 @@
  *
  *                                          prior to inclueing "enbsmaa.fx"
  *
-============================================================================================*/
-
-/*============================================================================================
- * the following descriptions is provided in SMAA.h.
- *                                  for more detial on SMAA, visit http://www.iryoku.com/smaa/
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_THRESHOLD specifies the threshold or sensitivity to edges.
- * Lowering this value you will be able to detect more edges at the expense of performance.
- *
- *      Range: [0, 0.5]
- *        0.1 is a reasonable value, and allows to catch most visible edges.
- *        0.05 is a rather overkill value, that allows to catch 'em all.
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *
- * SMAA_MAX_SEARCH_STEPS specifies the maximum steps performed in the horizontal/vertical
- * pattern searches, at each side of the pixel.
- *
- *      Range: [0, 98]
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *
- * SMAA_MAX_SEARCH_STEPS_DIAG specifies the maximum steps performed in the diagonal pattern
- * searches, at each side of the pixel. In this case we jump one pixel at time, instead of two.
- *
- *      Range: [0, 20]; set it to 0 to disable diagonal processing.
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *
- * SMAA_CORNER_ROUNDING specifies how much sharp corners will be rounded.
- *
- *      Range: [0, 100]; set it to 100 to disable corner detection.
- *
-=============================================================================================
- *                          Predicated thresholding
-=============================================================================================
- * Predicated thresholding allows to better preserve texture details and to improve performance,
- * by decreasing the number of detected edges using an additional buffer like the light
- * accumulation buffer, object ids or even the depth buffer (the depth buffer usage may be
- * limited to indoor or short range scenes).
- *
- * It locally decreases the luma or color threshold if an edge is found in an additional buffer
- * (so the global threshold can be higher).
- *
- * This method was developed by Playstation EDGE MLAA team, and used in
- * Killzone 3, by using the light accumulation buffer. More information here:
- *     http://iryoku.com/aacourse/downloads/06-MLAA-on-PS3.pptx
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_PREDICATION_THRESHOLD: Threshold to be used in the additional predication buffer.
- *
- *      Range: depends on the input, so you'll have to find the magic number that works for you.
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_PREDICATION_SCALE: How much to scale the global threshold used for luma or color
- * edgedetection when using predication.
- *
- *      Range: [1, 5]
- *
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- * SMAA_PREDICATION_STRENGTH:  How much to locally decrease the threshold.
- *
- *      Range: [0, 1]
- *
-=============================================================================================
- *                             Copyright & Redistribution
-=============================================================================================
- * Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
- * Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
- * Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
- * Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
- * Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy this software
- * and associated documentation files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom
- * the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or
- * substantial portions of the Software. As clarification, there is no requirement that the
- * copyright notice and permission be included in binary distributions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-=============================================================================================
- * end of descriptions
 ===========================================================================================*/
 
 
@@ -178,11 +90,7 @@ SamplerState SMAA_PointSamp  { Filter = MIN_MAG_MIP_POINT; };
 struct SMAA_enbTex2D {
     Texture2D   tex;
     bool        sRGB;
-
-    float4 get(float4 col) {
-        if (sRGB)   return pow(col, 1./2.2);
-        else        return col;
-    }
+    float4 get(float4 col) { return sRGB? pow(col, 1./2.2):col;}
 };
 
 #define SMAA_CUSTOM_SL

@@ -1,37 +1,37 @@
 # SMAA Enbseries Wrapper
 
-A SMAA 2.8 Wrapper for Dx9 Enbseries 0.288+ by kingeric1992.
+A SMAA 2.8 Wrapper for Dx11 Enbseries 0.288+ by kingeric1992.
 
 # Installation
 
 This project can be deploy though following methods
 
-* Download and place the project files user the path of `\enbseries\SMAA`
-* git subtree/submodule selected branch into `\enbseries\SMAA`
+* Download and place the project files user the path of `/enbseries/SMAA`
+* git subtree/submodule selected branch into `/enbseries/SMAA`
 
 # Usage
 
-Add `#include "enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
+Add `#include "SMAA/enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
 
 ```js
     //...
     #include "SMAA/enbsmaa.fxh"
     //...
-    technique myTechniques3 {...}
-    technique myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
-    technique myTechniques5 SMAA_PASS1(SMAA_Preset_Low)
-    technique myTechniques6 SMAA_PASS2(SMAA_Preset_Low)
-    technique myTechniques7 {...}
+    technique11 myTechniques3 {...}
+    technique11 myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
+    technique11 myTechniques5 SMAA_PASS1(SMAA_Preset_Low)
+    technique11 myTechniques6 SMAA_PASS2(SMAA_Preset_Low)
+    technique11 myTechniques7 {...}
 ```
 
 Built-in presets includes `SMAA_Preset_Low`, `SMAA_Preset_Medium`, `SMAA_Preset_High`, `SMAA_Preset_Ultra`
 To use SMAA in first pass
 
 ```js
-    technique myTechniques  SMAA_PASS0_NAME(  SMAA_Preset_Medium, "smaa demo")
-    technique myTechniques2 SMAA_PASS1(       SMAA_Preset_Medium)
-    technique myTechniques3 SMAA_PASS2(       SMAA_Preset_Medium)
-    technique myTechniques4 {...}
+    technique11 myTechniques  SMAA_PASS0_NAME(  SMAA_Preset_Medium, "smaa demo")
+    technique11 myTechniques2 SMAA_PASS1(       SMAA_Preset_Medium)
+    technique11 myTechniques3 SMAA_PASS2(       SMAA_Preset_Medium)
+    technique11 myTechniques4 {...}
 ```
 
 To create custom preset, fill-in the SMAA_t struct by creating helper function:
@@ -78,16 +78,16 @@ static const SMAA_t myPreset = {
 And use it in the techniques
 
 ```js
-    technique myTechniques3 {...}
-    technique myTechniques4 SMAA_PASS0(myPreset)
-    technique myTechniques5 SMAA_PASS1(myPreset)
-    technique myTechniques6 SMAA_PASS2(myPreset)
-    technique myTechniques7 {...}
+    technique11 myTechniques3 {...}
+    technique11 myTechniques4 SMAA_PASS0(myPreset)
+    technique11 myTechniques5 SMAA_PASS1(myPreset)
+    technique11 myTechniques6 SMAA_PASS2(myPreset)
+    technique11 myTechniques7 {...}
     //...
-    technique myTechniques12 SMAA_PASS0(getMyPreset())
-    technique myTechniques13 SMAA_PASS1(getMyPreset())
-    technique myTechniques14 SMAA_PASS2(getMyPreset())
-    technique myTechniques15 {...}
+    technique11 myTechniques12 SMAA_PASS0(getMyPreset())
+    technique11 myTechniques13 SMAA_PASS1(getMyPreset())
+    technique11 myTechniques14 SMAA_PASS2(getMyPreset())
+    technique11 myTechniques15 {...}
 ```
 
 The wrapper also provides a helper macro to create UI preset
@@ -99,18 +99,18 @@ The wrapper also provides a helper macro to create UI preset
 Where the "UI Prefix" is what will be prepend to UI names.
 
 ```js
-    technique myTechniques3 {...}
-    technique myTechniques4 SMAA_PASS0(myUIPreset)
-    technique myTechniques5 SMAA_PASS1(myUIPreset)
-    technique myTechniques6 SMAA_PASS2(myUIPreset)
-    technique myTechniques7 {...}
+    technique11 myTechniques3 {...}
+    technique11 myTechniques4 SMAA_PASS0(myUIPreset)
+    technique11 myTechniques5 SMAA_PASS1(myUIPreset)
+    technique11 myTechniques6 SMAA_PASS2(myUIPreset)
+    technique11 myTechniques7 {...}
 ```
 
 in addition, you can change internal rendertarget with :
 
 ```c
-    #define  SMAA_EDGE_TEX texture0name // default is RenderTargetRGB32F (only require 2bit-RG channel)
-    #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64 (RGBA required [0,1] )
+    #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (only require 2bit-RG channel)
+    #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64 (RGBA required [0,1] )
 ```
 
 prior to including "SMAA/enbSMAA.fxh"
