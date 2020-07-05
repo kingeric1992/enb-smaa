@@ -6,7 +6,7 @@ A SMAA 2.8 Wrapper for Dx9 Enbseries 0.288+ by kingeric1992.
 
 This project can be deploy though following methods
 
-* Download and place the project files uner the path of `\enbseries\SMAA`
+* Download and place the project files user the path of `\enbseries\SMAA`
 * git subtree/submodule selected branch into `\enbseries\SMAA`
 
 # Usage
@@ -99,21 +99,21 @@ The wrapper also provides a helper macro to create UI preset
 Where the "UI Prefix" is what will be prepend to UI names.
 
 ```js
-    technique11 myTechniques3 {...}
-    technique11 myTechniques4 SMAA_PASS0(myUIPreset)
-    technique11 myTechniques5 SMAA_PASS1(myUIPreset)
-    technique11 myTechniques6 SMAA_PASS2(myUIPreset)
-    technique11 myTechniques7 {...}
+    technique myTechniques3 {...}
+    technique myTechniques4 SMAA_PASS0(myUIPreset)
+    technique myTechniques5 SMAA_PASS1(myUIPreset)
+    technique myTechniques6 SMAA_PASS2(myUIPreset)
+    technique myTechniques7 {...}
 ```
 
 in addition, you can change internal rendertarget with :
 
 ```c
     #define  SMAA_EDGE_TEX texture0name // default is RenderTargetRGB32F (only require 2bit-RG channel)
-    #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64 (RGBA requred [0,1] )
+    #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64 (RGBA required [0,1] )
 ```
 
-prior to inclueing "SMAA/enbSMAA.fxh"
+prior to including "SMAA/enbSMAA.fxh"
 
 # Acknowledgments
 
