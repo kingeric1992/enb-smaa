@@ -9,11 +9,11 @@ This project can be deploy though following methods
 
 # Usage
 
-Adding `#include "enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
+Add `#include "enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
 
 ```c
     //...
-    #include "SMAA\enbsmaa.fxh"
+    #include "SMAA/enbsmaa.fxh"
     //...
     technique myTechniques3 {...}
     technique myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
@@ -111,7 +111,7 @@ in addition, you can change internal rendertarget with :
     #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64 (RGBA requred [0,1] )
 ```
 
-prior to inclueing "enbsmaa.fx"
+prior to inclueing "SMAA/enbSMAA.fxh"
 
 # Acknowledgments
 
