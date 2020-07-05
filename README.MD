@@ -13,7 +13,7 @@ This project can be deploy though following methods
 
 Add `#include "enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
 
-```c
+```js
     //...
     #include "SMAA/enbsmaa.fxh"
     //...
@@ -27,7 +27,7 @@ Add `#include "enbsmaa.fxh"` after other enb resources, use existing preset or c
 Built-in presets includes `SMAA_Preset_Low`, `SMAA_Preset_Medium`, `SMAA_Preset_High`, `SMAA_Preset_Ultra`
 To use SMAA in first pass
 
-```c
+```js
     technique myTechniques  SMAA_PASS0_NAME(  SMAA_Preset_Medium, "smaa demo")
     technique myTechniques2 SMAA_PASS1(       SMAA_Preset_Medium)
     technique myTechniques3 SMAA_PASS2(       SMAA_Preset_Medium)
@@ -36,7 +36,7 @@ To use SMAA in first pass
 
 To create custom preset, fill-in the SMAA_t struct by creating helper function:
 
-```c
+```js
 SMAA_t getMyPreset()
 {
     SMAA_t o = SMAA_Preset_High; // Starting template
@@ -64,7 +64,7 @@ SMAA_t getMyPreset()
 
 Or fill in `SMAA_t` struct directly:
 
-```c
+```js
 static const SMAA_t myPreset = {
     edgeMode,
     smaa_threshold, smaa_maxSearchSteps, smaa_maxSearchStepDiag,
@@ -108,7 +108,7 @@ Where the "UI Prefix" is what will be prepend to UI names.
 
 in addition, you can change internal rendertarget with :
 
-```js
+```c
     #define  SMAA_EDGE_TEX texture0name // default is RenderTargetRGB32F (only require 2bit-RG channel)
     #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64 (RGBA requred [0,1] )
 ```
