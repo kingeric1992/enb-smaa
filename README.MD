@@ -26,6 +26,7 @@ Add `#include "SMAA/enbSMAA.fxh"` after other enb resources, use existing preset
 ```
 
 Built-in presets includes `SMAA_Preset_Low`, `SMAA_Preset_Medium`, `SMAA_Preset_High`, `SMAA_Preset_Ultra`
+
 To use SMAA in first pass
 
 ```js
