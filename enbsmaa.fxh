@@ -5,7 +5,7 @@
 =============================================================================================
  *  Dx9 (SM30) SMAA 1x wrapper for Enbseries 0.288+ by kingeric1992
  *
- *  for SMAA parameter descriptions, refers to SMAA.hlsl
+ *  for individual SMAA parameter descriptions, refers to SMAA.hlsl
  *  for reference SMAA, visit https://github.com/iryoku/smaa
  *  for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
  *                      or https://github.com/kingeric1992/enb-smaa
