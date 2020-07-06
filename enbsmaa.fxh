@@ -15,7 +15,7 @@
 =============================================================================================
  *  Usage:
  *      Adding
- *          #include "enbsmaa.fxh"
+ *          #include "SMAA/enbsmaa.fxh"
  *                  after other enb resources, use existing preset ( or create new ones ),
  *  and insert SMAA techniques into your technique sections.
  *
@@ -97,10 +97,7 @@ struct SMAA_enbTex2D {
     sampler2D   samp;
     bool        sRGB;
 
-    float4 get(float4 col) {
-        if (sRGB)   return pow(col, 1./2.2);
-        else        return col;
-    }
+    float4 get(float4 col) { return sRGB? pow(col, 1./2.2):col; }
 };
 
 #define SMAA_CUSTOM_SL
