@@ -82,10 +82,10 @@
  *
  * in addition, you can change internal rendertarget with :
  *
- *              #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (only require 2bit-RG channel)
- *              #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64 (RGBA requred [0,1] )
+ *              #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGBA32  (requires 2bit-RGB)
+ *              #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64F (RGBA requred [0,1] )
  *
- *                                          prior to inclueing "enbsmaa.fx"
+ *                                          prior to inclueing "SMAA/enbSMAA.fxh"
  *
 ===========================================================================================*/
 
@@ -96,7 +96,6 @@
 struct SMAA_enbTex2D {
     sampler2D   samp;
     bool        sRGB;
-
     float4 get(float4 col) { return sRGB? pow(col, 1./2.2):col; }
 };
 
@@ -214,8 +213,8 @@ static const SMAA_t var = {\
 
 // Assests --------------------------------------------------------------------------------------------------------------------
 
-texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/SMAA_AreaTex.dds";   >;
-texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SMAA_SearchTex.dds"; >;
+texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/AreaTex.dds";   >;
+texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SearchTex.dds"; >;
 
 SMAA_TEX(SMAA_AreaTex,       SMAA_enbAreaTex,   false );
 SMAA_TEX(SMAA_SearchTex,     SMAA_enbSearchTex, false );
@@ -251,7 +250,7 @@ float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
         res = params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
     else
         res = params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy;
-    return float4(res, 0, res.x < 0);
+    return float4(res, res.x < 0, 0);
 }
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -261,7 +260,7 @@ void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) 
 }
 
 float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    if(tex2D(SMAA_EdgeTex.samp, i.uv.xy).a < .5) discard;
+    if(tex2D(SMAA_EdgeTex.samp, i.uv.xy).b < .5) discard;
     return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 

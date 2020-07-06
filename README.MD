@@ -1,21 +1,23 @@
 # SMAA Enbseries Wrapper
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 A SMAA 2.8 Wrapper for Dx9 Enbseries 0.288+ by kingeric1992.
 
-# Installation
 
-This project can be deploy though following methods
+## Installation
 
-* Download and place the project files user the path of `\enbseries\SMAA`
+This project can be deployed though following methods:
+
+* Download and place the project files under the path `\enbseries\SMAA`
 * git subtree/submodule selected branch into `\enbseries\SMAA`
 
-# Usage
+## Usage
 
-Add `#include "enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
+Add `#include "SMAA/enbSMAA.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
 
 ```js
     //...
-    #include "SMAA/enbsmaa.fxh"
+    #include "SMAA/enbSMAA.fxh"
     //...
     technique myTechniques3 {...}
     technique myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
@@ -25,6 +27,7 @@ Add `#include "enbsmaa.fxh"` after other enb resources, use existing preset or c
 ```
 
 Built-in presets includes `SMAA_Preset_Low`, `SMAA_Preset_Medium`, `SMAA_Preset_High`, `SMAA_Preset_Ultra`
+
 To use SMAA in first pass
 
 ```js
@@ -41,20 +44,16 @@ SMAA_t getMyPreset()
 {
     SMAA_t o = SMAA_Preset_High; // Starting template
 
-        // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
-        o.edgeMode           = ;
-        // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
-        o.stage              = ;
+        o.edgeMode           = ; // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
+        o.stage              = ; // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
 
         o.smaa_threshold          = ;
         o.smaa_maxSearchSteps     = ;
         o.smaa_maxSearchStepsDiag = ;
         o.smaa_cornerRounding     = ;
-        // local contrast adaptation factor
-        o.smaa_adaptFactor        = ;
+        o.smaa_adaptFactor        = ; // local contrast adaptation factor
 
-        // use predication
-        o.pred_enabled       = ;
+        o.pred_enabled       = ; // use predication
         o.pred_threshold     = ;
         o.pred_strength      = ;
         o.pred_scale         = ;
@@ -109,17 +108,21 @@ Where the "UI Prefix" is what will be prepend to UI names.
 in addition, you can change internal rendertarget with :
 
 ```c
-    #define  SMAA_EDGE_TEX texture0name // default is RenderTargetRGB32F (only require 2bit-RG channel)
-    #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64 (RGBA required [0,1] )
+    #define  SMAA_EDGE_TEX texture0name // default is RenderTargetRGBA32 (requires 2bit-RGB)
+    #define  SMAA_BLEND_TEX texture1name // default is RenderTargetRGBA64F (RGBA required [0,1] )
 ```
 
-prior to including "SMAA/enbSMAA.fxh"
+prior to including `SMAA/enbSMAA.fxh`
 
-# Acknowledgments
+## Acknowledgments
 
 * [Boris Vorontsov](http://enbdev.com/) for creating Enbseries.
 * [Jorge Jimenez et al.](http://www.iryoku.com/smaa/) for creating SMAA.
 
-# License
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
+- Copyright 2020 (C) kingeric1992 ( king_eric1992@hotmail.com )
 
 This project is using [SMAA](https://github.com/iryoku/smaa) under [MIT LICENSE](LICENSE.md)

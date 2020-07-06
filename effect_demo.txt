@@ -4,12 +4,11 @@
 //--------------------------------------------------------------------------
 // Loading enbseries resources.
 
-texture2D   texOriginal;
 texture2D   texColor;
 texture2D   texDepth;
 texture2D   RenderTargetRGBA32;     //R8G8B8A8 32 bit ldr format
 texture2D   RenderTargetRGBA64F;    //R16B16G16A16F 64 bit hdr format
-float4	    ScreenSize;             //x = W, y = 1/W, z = W/H, w = H/W
+float4	    ScreenSize;             //x = Width, y = 1/Width, z = Width/Height, w = Height/Width
 
 //--------------------------------------------------------------------------
 // Load wrapper. note: path is relative to enbseres/
