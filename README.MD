@@ -8,8 +8,8 @@ A SMAA 2.8 Wrapper for Dx9 Enbseries 0.288+ by kingeric1992.
 
 This project can be deployed though following methods:
 
-* Download and place the project files under the path `\enbseries\SMAA`
-* git subtree/submodule selected branch into `\enbseries\SMAA`
+* Download and place the project files under the path `/enbseries/SMAA`
+* git subtree/submodule selected branch into `/enbseries/SMAA`
 
 ## Usage
 
