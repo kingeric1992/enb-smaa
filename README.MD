@@ -1,15 +1,16 @@
 # SMAA Enbseries Wrapper
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-A SMAA 2.8 Wrapper for Dx11 Enbseries 0.288+ by kingeric1992.
+A SMAA 2.8 Wrapper for Dx11 (hlsl) Enbseries 0.288+ by kingeric1992.
 
-# Installation
+## Installation
 
 This project can be deployed though following methods:
 
 * Download and place the project files under the path `/enbseries/SMAA`
 * git subtree/submodule selected branch into `/enbseries/SMAA`
 
-# Usage
+## Usage
 
 Add `#include "SMAA/enbSMAA.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
 
@@ -104,17 +105,21 @@ Where the "UI Prefix" is what will be prepend to UI names.
 in addition, you can change internal rendertarget with :
 
 ```c
-    #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (requires 2bit-RGB )
-    #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64 (RGBA required [0,1] )
+    #define  SMAA_EDGE_TEX  texture0name   // default is RenderTargetRGB32F (requires 2bit-RGB )
+    #define  SMAA_BLEND_TEX texture1name   // default is RenderTargetRGBA64 (RGBA required [0,1] )
 ```
 
-prior to including "SMAA/enbSMAA.fxh"
+prior to including `SMAA/enbSMAA.fxh`
 
-# Acknowledgments
+## Acknowledgments
 
 * [Boris Vorontsov](http://enbdev.com/) for creating Enbseries.
 * [Jorge Jimenez et al.](http://www.iryoku.com/smaa/) for creating SMAA.
 
-# License
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
+- Copyright 2020 (C) kingeric1992 ( king_eric1992@hotmail.com )
 
 This project is using [SMAA](https://github.com/iryoku/smaa) under [MIT LICENSE](LICENSE.md)

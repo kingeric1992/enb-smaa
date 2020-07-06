@@ -166,7 +166,7 @@ static const SMAA_t SMAA_Preset_High    = { 0, 0.1, 16, 8,  25, 2, true, 0.01, 0
 static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, 2, true, 0.01, 0.4, 2, 3 };
 
 #ifndef SMAA_EDGE_TEX
-#define SMAA_EDGE_TEX   RenderTargetRGB32F
+#define SMAA_EDGE_TEX   RenderTargetRGB32F //R11G11B10
 #endif
 #ifndef SMAA_BLEND_TEX
 #define SMAA_BLEND_TEX  RenderTargetRGBA64

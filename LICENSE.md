@@ -1,14 +1,4 @@
-# License for SMAA
-
-Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
-
-Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
-
-Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
-
-Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
-
-Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
+# MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy this software
 and associated documentation files (the "Software"), to deal in the Software without
@@ -25,3 +15,17 @@ BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR P
 NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## SMAA 
+Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
+
+Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
+
+Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
+
+Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
+
+Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
+
+## SMAA Enbseries Wrapper
+Copyright (C) 2020 kingeric1992 (king_eric1992@hotmail.com)
