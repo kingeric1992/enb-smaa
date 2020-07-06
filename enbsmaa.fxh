@@ -5,12 +5,11 @@
 =============================================================================================
  *  Dx11 (SM50) SMAA 1x wrapper for Enbseries 0.288+ by kingeric1992
  *
- *  for SMAA parameter descriptions, refers to SMAA.hlsl
+ *  for individual SMAA parameter descriptions, refers to SMAA.hlsl
  *  for reference SMAA, visit https://github.com/iryoku/smaa
  *  for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
  *                      or https://github.com/kingeric1992/enb-smaa
  *                                                                      update.  July/6/2020
- *  note: SMAA.hlsl was modified for dx9 compatibility.
  *
 =============================================================================================
  *  Usage:
@@ -73,7 +72,7 @@
  *
  * in addition, you can change internal rendertarget with :
  *
- *              #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (only require 2bit-RG channel)
+ *              #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (only requires 2bit-RGB channel)
  *              #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64 (RGBA requred [0,1] )
  *
  *                                          prior to inclueing "enbsmaa.fx"
@@ -201,13 +200,13 @@ static const SMAA_t var = {\
 
 // Assests --------------------------------------------------------------------------------------------------------------------
 
-Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/SMAA_AreaTex.dds";   >;
-Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SMAA_SearchTex.dds"; >;
+Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string ResourceName = "SMAA/AreaTex.dds";   >;
+Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SearchTex.dds"; >;
 
 static const SMAA_enbTex2D  SMAA_AreaTex        = { SMAA_enbAreaTex, false };
 static const SMAA_enbTex2D  SMAA_SearchTex      = { SMAA_enbAreaTex, false };
 static const SMAA_enbTex2D  SMAA_ColorTex       = { TextureColor, false };
-static const SMAA_enbTex2D  SMAA_ColorTexGamma  = { TextureColor, true };   // sRGB texture
+static const SMAA_enbTex2D  SMAA_ColorTexGamma  = { TextureColor, true };   // adding Gamma to emulate sRGB texture linear read
 static const SMAA_enbTex2D  SMAA_DepthTex       = { TextureDepth, false };
 static const SMAA_enbTex2D  SMAA_EdgeTex        = { SMAA_EDGE_TEX, false};
 static const SMAA_enbTex2D  SMAA_BlendTex       = { SMAA_BLEND_TEX, false};
@@ -224,7 +223,7 @@ void SMAA_edgeDetectionVS( inout SMAA_VS_Struct io, uniform SMAA_t params) {
     io.pos.w = 1.;
 }
 
-// todo: test performance of different flags
+// todo: test performance of different switch flags
 float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
     float2 res = 0;
     if (params.pred_enabled) {
@@ -240,7 +239,7 @@ float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Targe
             default: res = params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg; break;
         }
     }
-    return float4(res, 0, res.x < 0); // res.xy = -1 when no edges.
+    return float4(res, res.x < 0, 0); // res.xy = -1 when no edges. (leaving alpha incase of using non-alpha tex)
 }
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -250,7 +249,7 @@ void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) 
 }
 
 float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
-    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).a > .5) return 0;
+    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).b > .5) return 0;
     return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 

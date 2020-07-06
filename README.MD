@@ -4,18 +4,18 @@ A SMAA 2.8 Wrapper for Dx11 Enbseries 0.288+ by kingeric1992.
 
 # Installation
 
-This project can be deploy though following methods
+This project can be deployed though following methods:
 
-* Download and place the project files user the path of `/enbseries/SMAA`
+* Download and place the project files under the path `/enbseries/SMAA`
 * git subtree/submodule selected branch into `/enbseries/SMAA`
 
 # Usage
 
-Add `#include "SMAA/enbsmaa.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
+Add `#include "SMAA/enbSMAA.fxh"` after other enb resources, use existing preset or create new ones and insert SMAA techniques into your technique sections.
 
 ```js
     //...
-    #include "SMAA/enbsmaa.fxh"
+    #include "SMAA/enbSMAA.fxh"
     //...
     technique11 myTechniques3 {...}
     technique11 myTechniques4 SMAA_PASS0(SMAA_Preset_Low)
@@ -40,21 +40,16 @@ To create custom preset, fill-in the SMAA_t struct by creating helper function:
 SMAA_t getMyPreset()
 {
     SMAA_t o = SMAA_Preset_High; // Starting template
-
-        // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
-        o.edgeMode           = ;
-        // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
-        o.stage              = ;
+        o.edgeMode           = ; // 0 = ColorEdge, 1 = LumaEdge, 2 = DepthEdge
+        o.stage              = ; // 0 = frameBuffer, 1 = edgeTex, 2 = blendWeight, 3 = SMAA
 
         o.smaa_threshold          = ;
         o.smaa_maxSearchSteps     = ;
         o.smaa_maxSearchStepsDiag = ;
         o.smaa_cornerRounding     = ;
-        // local contrast adaptation factor
-        o.smaa_adaptFactor        = ;
+        o.smaa_adaptFactor        = ; // local contrast adaptation factor
 
-        // use predication
-        o.pred_enabled       = ;
+        o.pred_enabled       = ; // use predication
         o.pred_threshold     = ;
         o.pred_strength      = ;
         o.pred_scale         = ;
@@ -109,7 +104,7 @@ Where the "UI Prefix" is what will be prepend to UI names.
 in addition, you can change internal rendertarget with :
 
 ```c
-    #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (only require 2bit-RG channel)
+    #define  SMAA_EDGE_TEX      texture0name   // default is RenderTargetRGB32F (requires 2bit-RGB )
     #define  SMAA_BLEND_TEX     texture1name   // default is RenderTargetRGBA64 (RGBA required [0,1] )
 ```
 
