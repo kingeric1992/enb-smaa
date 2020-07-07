@@ -8,7 +8,7 @@ A SMAA 2.8 Wrapper for Dx11 (hlsl) Enbseries 0.288+ by kingeric1992.
 This project can be deployed though following methods:
 
 * Download and place the project files under the path `/enbseries/SMAA`
-* git subtree/submodule selected branch into `/enbseries/SMAA`
+* git subtree/submodule/clone selected branch into `/enbseries/SMAA`
 
 ## Usage
 
