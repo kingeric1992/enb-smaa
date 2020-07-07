@@ -89,7 +89,11 @@ SamplerState SMAA_PointSamp  { Filter = MIN_MAG_MIP_POINT; };
 struct SMAA_enbTex2D {
     Texture2D   tex;
     bool        sRGB;
-    float4 get(float4 col) { return sRGB? pow(col, 1./2.2):col;}
+    float4 get(float4 col) {
+        [flatten]
+        if (sRGB) return pow(col, 1./2.2);
+        else return col;
+    }
 };
 
 #define SMAA_CUSTOM_SL
@@ -108,7 +112,7 @@ struct SMAA_enbTex2D {
 #define SMAA_RT_METRICS float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
 #define SMAA_THRESHOLD              (smaa_threshold)
 #define SMAA_MAX_SEARCH_STEPS       (smaa_maxSearchSteps)
-#define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag) // 0 == disabled?
+#define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag - 0.5) // 0 == disabled?
 #define SMAA_CORNER_ROUNDING        (smaa_cornerRounding)
 #define SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR (smaa_adaptFactor)
 #define SMAA_PREDICATION_THRESHOLD  (pred_threshold)
@@ -174,16 +178,16 @@ static const SMAA_t SMAA_Preset_Ultra   = { 0, 0.05,32,16,  25, 2, true, 0.01, 0
 
 //-------------------Internal resource & helpers-------------------------------------------------------------------------------
 #define SMAA_UI( prefix, var  ) \
-uint    var##_edgeMode           < string UIName= prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
-float   var##_threshold          < string UIName= prefix " Threshold";             int UIMin=0; float  UIMax=0.5;  > = {0.15};\
-uint    var##_maxSearchSteps     < string UIName= prefix " Search Steps";          int UIMin=0; int    UIMax=98;   > = {64};\
-uint    var##_maxSearchStepsDiag < string UIName= prefix " Diagonal Search Steps"; int UIMin=0; int    UIMax=20;   > = {16};\
-uint    var##_cornerRounding     < string UIName= prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
-float   var##_contraAdapt        < string UIName= prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
-bool    var##_predication        < string UIName= prefix " Predication";           > = {true};\
-uint    var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
-uint    var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
-uint    var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
+int    var##_edgeMode           < string UIName= prefix " Edge Mode";             int UIMin=0; int    UIMax=2;    > = {0};\
+float  var##_threshold          < string UIName= prefix " Threshold";             int UIMin=0; float  UIMax=0.5;  > = {0.15};\
+int    var##_maxSearchSteps     < string UIName= prefix " Search Steps";          int UIMin=0; int    UIMax=98;   > = {64};\
+int    var##_maxSearchStepsDiag < string UIName= prefix " Diagonal Search Steps"; int UIMin=0; int    UIMax=20;   > = {16};\
+int    var##_cornerRounding     < string UIName= prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
+float  var##_contraAdapt        < string UIName= prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
+bool   var##_predication        < string UIName= prefix " Predication";           > = {true};\
+float  var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
+float  var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=0; int    UIMax=1;    > = {0.4};\
+float  var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=1; int    UIMax=5;    > = {2.0};\
 \
 static const SMAA_t var = {\
     var##_edgeMode,\
@@ -204,7 +208,7 @@ Texture2D SMAA_enbAreaTex   < string UIName = "SMAA Area Tex";   string Resource
 Texture2D SMAA_enbSearchTex < string UIName = "SMAA Search Tex"; string ResourceName = "SMAA/SearchTex.dds"; >;
 
 static const SMAA_enbTex2D  SMAA_AreaTex        = { SMAA_enbAreaTex, false };
-static const SMAA_enbTex2D  SMAA_SearchTex      = { SMAA_enbAreaTex, false };
+static const SMAA_enbTex2D  SMAA_SearchTex      = { SMAA_enbSearchTex, false };
 static const SMAA_enbTex2D  SMAA_ColorTex       = { TextureColor, false };
 static const SMAA_enbTex2D  SMAA_ColorTexGamma  = { TextureColor, true };   // adding Gamma to emulate sRGB texture linear read
 static const SMAA_enbTex2D  SMAA_DepthTex       = { TextureDepth, false };
@@ -249,7 +253,7 @@ void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) 
 }
 
 float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
-    if(SMAA_EdgeTex.tex.Load(i.pos.xyw).b > .5) return 0;
+    if(SMAA_EdgeTex.tex.Load(i.pos.xyz).b > .5) return 0;
     return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 
@@ -262,9 +266,9 @@ void SMAA_neighborhoodBlendingVS( inout SMAA_VS_Struct io, uniform SMAA_t params
 // todo: test performance of different flags
 float4 SMAA_NeighborhoodBlendingPS( SMAA_VS_Struct i, uniform SMAA_t params) : SV_Target {
     switch (params.stage) {
-        case 0:  return SMAA_ColorTex.tex.Load(i.pos.xyw);
-        case 1:  return SMAA_EdgeTex.tex.Load( i.pos.xyw);
-        case 2:  return SMAA_BlendTex.tex.Load(i.pos.xyw);
+        case 0:  return SMAA_ColorTex.tex.Load(i.pos.xyz);
+        case 1:  return SMAA_EdgeTex.tex.Load( i.pos.xyz);
+        case 2:  return SMAA_BlendTex.tex.Load(i.pos.xyz);
         default: return params.SMAANeighborhoodBlendingPS( i.uv.xy, i.offset[0], SMAA_ColorTex, SMAA_BlendTex);
     }
 }
