@@ -28,4 +28,4 @@ Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
 Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
 
 ## SMAA Enbseries Wrapper
-Copyright (C) 2020 kingeric1992 (king_eric1992@hotmail.com)
+Copyright (C) 2021 kingeric1992 (king_eric1992@hotmail.com)
