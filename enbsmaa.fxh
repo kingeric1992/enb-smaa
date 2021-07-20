@@ -9,7 +9,7 @@
  *  for reference SMAA, visit https://github.com/iryoku/smaa
  *  for more detail, visit http://enbseries.enbdev.com/forum/viewtopic.php?f=7&t=4721
  *                      or https://github.com/kingeric1992/enb-smaa
- *                                                                      update.  July/6/2020
+ *                                                                      update.  July/20/2021
  *  note: SMAA.hlsl was modified for dx9 compatibility.
  *
 =============================================================================================
@@ -96,7 +96,7 @@
 struct SMAA_enbTex2D {
     sampler2D   samp;
     bool        sRGB;
-    float4 get(float4 col) { return sRGB? pow(col, 1./2.2):col; }
+    float4 get(float4 col) { [flatten] if(sRGB) return  pow(col, 1./2.2); else return col; }
 };
 
 #define SMAA_CUSTOM_SL
@@ -114,7 +114,7 @@ struct SMAA_enbTex2D {
 #define SMAA_RT_METRICS             float4( ScreenSize.y, ScreenSize.y * ScreenSize.z, ScreenSize.x, ScreenSize.x * ScreenSize.w)
 #define SMAA_THRESHOLD              (smaa_threshold)
 #define SMAA_MAX_SEARCH_STEPS       (smaa_maxSearchSteps)
-#define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag) // 0 == disabled?
+#define SMAA_MAX_SEARCH_STEPS_DIAG  (smaa_maxSearchStepDiag - 0.5) // 0 == disabled?
 #define SMAA_CORNER_ROUNDING        (smaa_cornerRounding)
 #define SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR (smaa_adaptFactor)
 #define SMAA_PREDICATION_THRESHOLD  (pred_threshold)
@@ -187,9 +187,9 @@ int     var##_maxSearchStepsDiag < string UIName= prefix " Diagonal Search Steps
 int     var##_cornerRounding     < string UIName= prefix " Corner Rounding";       int UIMin=0; int    UIMax=100;  > = {8};\
 float   var##_contraAdapt        < string UIName= prefix " Contrast Adaptation";   int UIMin=0; float  UIMax=5.0;  > = {2.0};\
 bool    var##_predication        < string UIName= prefix " Predication";           > = {true};\
-int     var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
-int     var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=1; int    UIMax=5;    > = {2};\
-int     var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=0; int    UIMax=1;    > = {0.4};\
+float   var##_thresholdP         < string UIName= prefix " Predication Threshold"; int UIMin=0; int    UIMax=1;    > = {0.01};\
+float   var##_strengthP          < string UIName= prefix " Predication Strength";  int UIMin=0; int    UIMax=1;    > = {0.4};\
+float   var##_scaleP             < string UIName= prefix " Predication Scale";     int UIMin=1; int    UIMax=5;    > = {2.0};\
 \
 static const SMAA_t var = {\
     var##_edgeMode,\
@@ -240,17 +240,16 @@ float4 SMAA_edgeDetectionPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
     float2 res = 0;
     int sel = params.edgeMode*2 + params.pred_enabled;
 
-    [flatten] if (sel == 0)
-        res = params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg;
-    else [flatten] if (sel == 1)
-        res = params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
-    else [flatten] if (sel == 2)
-        res = params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg;
-    else [flatten] if (sel == 3)
-        res = params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg;
-    else
-        res = params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy;
-    return float4(res, res.x < 0, 0);
+    // these functions returns -1 when no edges is found.
+    switch(sel) 
+    {
+        case 0:  res = params.SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma).rg; break;
+        case 1:  res = params.pred().SMAAColorEdgeDetectionPS( i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg; break;
+        case 2:  res = params.SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma).rg; break;
+        case 3:  res = params.pred().SMAALumaEdgeDetectionPS(  i.uv.xy, i.offset, SMAA_ColorTexGamma, SMAA_DepthTex).rg; break;
+        default: res = params.SMAADepthEdgeDetectionPS( i.uv.xy, i.offset, SMAA_DepthTex).xy; break;
+    }
+    return float4(res, res.x < 0, 0); // no edge when x = -1
 }
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -260,7 +259,7 @@ void SMAA_blendingWeightCalcVS( inout SMAA_VS_Struct io, uniform SMAA_t params) 
 }
 
 float4 SMAA_blendingWeightCalcPS( SMAA_VS_Struct i, uniform SMAA_t params) : COLOR {
-    if(tex2D(SMAA_EdgeTex.samp, i.uv.xy).b < .5) discard;
+    if(tex2D(SMAA_EdgeTex.samp, i.uv.xy).b > .5) return 0; // if no edge.
     return params.SMAABlendingWeightCalculationPS( i.uv.xy, i.uv.zw, i.offset, SMAA_EdgeTex, SMAA_AreaTex, SMAA_SearchTex, 0);
 }
 
